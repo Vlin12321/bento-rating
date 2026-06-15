@@ -380,11 +380,10 @@ function filterStores() {
 function getDefaultNickname() {
   const saved = localStorage.getItem('bentoRater');
   if (saved) return saved;
-  const seed = navigator.userAgent + screen.width + screen.height + (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
-  const hash = [...seed].reduce((h, c) => Math.imul(h, 31) + c.charCodeAt(0) | 0, 0);
-  const adj = ['吃貨', '大胃王', '美食家', '挑嘴的', '快樂的', '飢餓的', '幸福的', '滿足的'];
-  const noun = ['熊貓', '柴犬', '貓咪', '兔子', '倉鼠', '狐狸', '浣熊', '企鵝'];
-  const nick = adj[Math.abs(hash) % adj.length] + noun[Math.abs(hash >> 4) % noun.length];
+  const adj  = ['吃貨', '大胃王', '美食家', '挑嘴', '快樂', '飢餓', '幸福', '滿足', '貪吃', '挑食'];
+  const noun = ['熊貓', '柴犬', '貓咪', '兔子', '倉鼠', '狐狸', '浣熊', '企鵝', '海豹', '水獺'];
+  const num  = Math.floor(Math.random() * 90) + 10; // 10–99
+  const nick = adj[Math.floor(Math.random() * adj.length)] + noun[Math.floor(Math.random() * noun.length)] + num;
   localStorage.setItem('bentoRater', nick);
   return nick;
 }
