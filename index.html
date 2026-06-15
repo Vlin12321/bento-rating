@@ -40,6 +40,10 @@
         <option value="count">依評價數</option>
         <option value="name">依店名</option>
       </select>
+      <button onclick="syncMenu()" id="syncBtn" title="從餐點確認表同步今日菜單"
+        class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
+        🔄
+      </button>
     </div>
   </div>
 </header>
@@ -443,6 +447,29 @@ function esc(str) {
 document.getElementById('ratingModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
 });
+
+// ─── 同步今日菜單 ────────────────────────────────────────────
+async function syncMenu() {
+  const btn = document.getElementById('syncBtn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const result = await apiFetch('syncTodayMenu', { date: getToday() });
+    if (result.success) {
+      const msg = result.added > 0
+        ? `✅ 同步完成，新增 ${result.added} 道菜（${result.sheets?.join('、')}）`
+        : `ℹ️ 已是最新（${result.sheets?.join('、')}）`;
+      alert(msg);
+      await init();
+    } else {
+      alert(`⚠️ ${result.message || '同步失敗'}`);
+    }
+  } catch {
+    alert('同步失敗，請稍後再試');
+  }
+  btn.textContent = '🔄';
+  btn.disabled = false;
+}
 
 // 啟動
 init();
