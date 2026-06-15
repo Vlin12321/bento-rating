@@ -325,14 +325,16 @@ function renderStoreDetail(store) {
             <div class="flex-1 min-w-0">
               <span class="text-sm font-medium text-gray-700">${r.dish}</span>
               ${r.sides ? `<span class="text-sm text-gray-500 ml-1">/ ${r.sides}</span>` : ''}
-              ${r.comment ? `<div class="text-sm text-gray-500 mt-0.5">${r.comment}</div>` : ''}
+              ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
             </div>
-            <div class="shrink-0 flex items-center gap-1.5">
-              ${r.score !== null ? scoreBadge(r.score) : ''}
-              <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
+            <div class="shrink-0 flex flex-col items-end gap-0.5">
+              <div class="flex items-center gap-1.5">
+                ${r.score !== null ? scoreBadge(r.score) : ''}
+                <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
+              </div>
+              <span class="text-xs text-gray-400 whitespace-nowrap">${r.date}</span>
             </div>
           </div>
-          <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
         </div>`).join('')
     : '<div class="text-sm text-gray-400 py-2">尚無評價</div>';
 
@@ -615,18 +617,20 @@ function showReviewsModal(storeName) {
           <div class="flex-1 min-w-0">
             <div class="text-sm font-medium text-gray-700">${r.dish}</div>
             ${r.sides ? `<div class="text-sm text-gray-500">${r.sides}</div>` : ''}
-            ${r.comment ? `<div class="text-sm text-gray-500 mt-0.5">${r.comment}</div>` : ''}
+            ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
           </div>
           <div class="shrink-0 flex flex-col items-end gap-0.5">
-            ${r.score !== null ? scoreBadge(r.score) : ''}
-            <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
+            <div class="flex items-center gap-1.5">
+              ${r.score !== null ? scoreBadge(r.score) : ''}
+              <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
+            </div>
+            <div class="flex items-center gap-1 mt-0.5">
+              <span class="text-xs text-gray-400 whitespace-nowrap">${r.date}</span>
+              <button data-idx="${idx}" data-store="${esc(storeName)}"
+                onclick="event.preventDefault();deleteRating(+this.dataset.idx,this.dataset.store)"
+                class="text-xs text-gray-300 hover:text-red-400 transition-colors">🗑</button>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center justify-between mt-0.5">
-          <span class="text-xs text-gray-300">${r.date}</span>
-          <button data-idx="${idx}" data-store="${esc(storeName)}"
-            onclick="event.preventDefault();deleteRating(+this.dataset.idx,this.dataset.store)"
-            class="text-xs text-gray-300 hover:text-red-400 transition-colors px-1">🗑</button>
         </div>
       </div>`).join('');
   }
