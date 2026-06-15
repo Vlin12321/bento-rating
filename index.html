@@ -264,7 +264,7 @@ function renderDaySection(day, stores, dateStr) {
           ${avg !== null
             ? `<div class="mt-1.5 flex items-center gap-1.5">
                 ${scoreBadge(avg)}
-                <button data-store="${esc(store)}" data-date="${dateStr}" onclick="showReviewsModal(this.dataset.store,this.dataset.date)" class="text-xs text-orange-500 hover:underline">${count} 則評價</button>
+                <button data-store="${esc(store)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)" class="text-xs text-orange-500 hover:underline">${count} 則評價</button>
                </div>`
             : '<div class="text-xs text-gray-400 mt-1">尚無評分</div>'}
         </div>
@@ -558,15 +558,13 @@ function normalizeMenuDish(dish) {
 }
 
 // ─── 查看評價 Modal ──────────────────────────────────────────
-function showReviewsModal(storeName, dateStr) {
+function showReviewsModal(storeName) {
   const key = normalizeName(storeName);
   const store = allStores.find(s => normalizeName(s.name) === key);
-  const reviews = store ? store.reviews.filter(r => !dateStr || r.date === dateStr) : [];
+  const reviews = store ? store.reviews : [];
 
   document.getElementById('reviewsModalTitle').textContent = storeName;
-  document.getElementById('reviewsModalDate').textContent = dateStr
-    ? `${dateStr} 的評價（共 ${reviews.length} 則）`
-    : `全部評價（${reviews.length} 則）`;
+  document.getElementById('reviewsModalDate').textContent = `全部評價（${reviews.length} 則）`;
 
   const body = document.getElementById('reviewsModalBody');
   if (!reviews.length) {
@@ -587,15 +585,14 @@ function showReviewsModal(storeName, dateStr) {
         </div>
         <div class="flex items-center justify-between mt-0.5">
           <span class="text-xs text-gray-300">${r.date}</span>
-          <button onclick="deleteRating(${idx}, '${esc(storeName)}', '${dateStr}')"
+          <button data-idx="${idx}" data-store="${esc(storeName)}"
+            onclick="event.preventDefault();deleteRating(+this.dataset.idx,this.dataset.store)"
             class="text-xs text-gray-300 hover:text-red-400 transition-colors px-1">🗑</button>
         </div>
       </div>`).join('');
   }
 
-  // store for delete lookup
   body._reviews = reviews;
-  body._storeName = storeName;
 
   document.getElementById('reviewsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -606,7 +603,7 @@ function closeReviewsModal() {
   document.body.style.overflow = '';
 }
 
-async function deleteRating(idx, storeName, dateStr) {
+async function deleteRating(idx, storeName) {
   const body = document.getElementById('reviewsModalBody');
   const r = body._reviews?.[idx];
   if (!r) return;
@@ -628,7 +625,7 @@ async function deleteRating(idx, storeName, dateStr) {
     });
     if (res.success) {
       await init();
-      showReviewsModal(storeName, dateStr);
+      showReviewsModal(storeName);
     } else {
       alert(res.error || '刪除失敗');
     }
