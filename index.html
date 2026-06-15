@@ -36,6 +36,7 @@
       <input id="searchInput" type="text" placeholder="搜尋店家..."
         class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-orange-400">
       <select id="sortSelect" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-orange-400 bg-white">
+        <option value="date">依日期</option>
         <option value="avg">依均分</option>
         <option value="count">依評價數</option>
         <option value="name">依店名</option>
@@ -186,7 +187,7 @@ async function init() {
         apiFetch('getMenu')
       ]);
 
-  allStores = stores || [];
+  allStores = mergeStores(stores || []);
   menuData = menu || {};
 
   document.getElementById('loading').classList.add('hidden');
@@ -197,7 +198,7 @@ async function init() {
     renderTodaySection(todayStores.stores, today);
   }
 
-  renderStoreList(allStores);
+  filterStores();
 
   // 搜尋 & 排序
   document.getElementById('searchInput').addEventListener('input', filterStores);
@@ -250,19 +251,18 @@ function renderStoreList(stores) {
   }
 
   stores.forEach(store => {
-    const item = document.createElement('details');
+    const item = document.createElement('div');
     item.className = 'bg-white rounded-xl card overflow-hidden';
     item.innerHTML = `
-      <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+      <div class="flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="font-medium text-gray-800 truncate">${store.name}</div>
+          <div class="font-medium text-gray-800">${store.name}</div>
           <span class="text-xs text-gray-400 shrink-0">${store.count} 則評價</span>
         </div>
         <div class="flex items-center gap-2 shrink-0 ml-2">
           ${scoreBadge(store.avg)}
-          <span class="text-gray-300">›</span>
         </div>
-      </summary>
+      </div>
       <div class="border-t border-gray-100">
         ${renderStoreDetail(store)}
       </div>`;
@@ -271,47 +271,27 @@ function renderStoreList(stores) {
 }
 
 function renderStoreDetail(store) {
-  const dishes = menuData[store.name] || [];
+  const reviewsHtml = store.reviews.length
+    ? store.reviews.map(r => `
+        <div class="py-2 border-b border-gray-50 last:border-0">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-medium text-gray-700">${r.dish}</span>
+              ${r.sides ? `<span class="text-xs text-gray-400 ml-1">/ ${r.sides}</span>` : ''}
+              ${r.comment ? `<div class="text-sm text-gray-500 mt-0.5">${r.comment}</div>` : ''}
+            </div>
+            <div class="shrink-0 flex items-center gap-1.5">
+              ${r.score !== null ? scoreBadge(r.score) : ''}
+              <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
+            </div>
+          </div>
+          <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
+        </div>`).join('')
+    : '<div class="text-sm text-gray-400 py-2">尚無評價</div>';
+
   return `
     <div class="px-4 py-3">
-      <!-- Inner tabs -->
-      <div class="flex gap-4 border-b border-gray-100 mb-3 text-sm">
-        <button class="tab-btn active pb-2 font-medium text-gray-600"
-          onclick="switchTab(this,'menu-${esc(store.name)}','review-${esc(store.name)}')">📋 菜單</button>
-        <button class="tab-btn pb-2 font-medium text-gray-400"
-          onclick="switchTab(this,'review-${esc(store.name)}','menu-${esc(store.name)}')">💬 評價 (${store.count})</button>
-      </div>
-
-      <!-- 菜單 Tab -->
-      <div id="menu-${esc(store.name)}" class="tab-pane">
-        ${dishes.length
-          ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm text-gray-700">
-              ${dishes.map(d=>`<div class="py-0.5">• ${d}</div>`).join('')}
-             </div>`
-          : '<div class="text-sm text-gray-400">尚無菜單資料</div>'}
-      </div>
-
-      <!-- 評價 Tab -->
-      <div id="review-${esc(store.name)}" class="tab-pane hidden">
-        ${store.reviews.length
-          ? store.reviews.slice(0,10).map(r => `
-            <div class="py-2 border-b border-gray-50 last:border-0">
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex-1 min-w-0">
-                  <span class="text-xs font-medium text-gray-700">${r.dish}</span>
-                  ${r.sides ? `<span class="text-xs text-gray-400 ml-1">/ ${r.sides}</span>` : ''}
-                  ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
-                </div>
-                <div class="shrink-0 flex items-center gap-1.5">
-                  ${r.score !== null ? scoreBadge(r.score) : ''}
-                  <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
-                </div>
-              </div>
-              <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
-            </div>`).join('')
-          : '<div class="text-sm text-gray-400">尚無評價</div>'}
-      </div>
-
+      ${reviewsHtml}
       <button onclick="openModal('${esc(store.name)}')"
         class="mt-3 w-full text-sm text-orange-600 border border-orange-200 hover:bg-orange-50 rounded-lg py-1.5 transition-colors font-medium">
         + 我要評分
@@ -326,7 +306,8 @@ function filterStores() {
 
   let filtered = allStores.filter(s => s.name.toLowerCase().includes(q));
 
-  if (sort === 'avg') filtered.sort((a,b) => b.avg - a.avg);
+  if (sort === 'date') filtered.sort((a,b) => (b.latestDate||'').localeCompare(a.latestDate||''));
+  else if (sort === 'avg') filtered.sort((a,b) => b.avg - a.avg);
   else if (sort === 'count') filtered.sort((a,b) => b.count - a.count);
   else filtered.sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
 
@@ -432,6 +413,38 @@ async function apiPost(data) {
 function getToday() {
   const d = new Date();
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ─── 店家名稱正規化（合併相似名稱）────────────────────────────
+// 移除 - · 空格等符號後比對，e.g. 諾艾榭-歐風精緻餐盒 ≡ 諾艾榭歐風精緻餐盒
+function normalizeName(name) {
+  return name.replace(/[-·・—\s　]/g, '').toLowerCase();
+}
+
+function mergeStores(stores) {
+  const groups = {};
+  for (const s of stores) {
+    const key = normalizeName(s.name);
+    if (!groups[key]) {
+      groups[key] = { ...s, reviews: [...s.reviews] };
+    } else {
+      // 合併：保留評價數多的名字，合計評分與評價
+      const g = groups[key];
+      g.reviews = [...g.reviews, ...s.reviews]
+        .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      const scored = g.reviews.filter(r => r.score !== null);
+      g.avg = scored.length
+        ? Math.round(scored.reduce((sum,r)=>sum+r.score,0)/scored.length*10)/10
+        : null;
+      g.count = g.reviews.length;
+      if (s.count > g.count) g.name = s.name; // 保留評價多的名稱
+    }
+  }
+  // 加上最新日期供排序用
+  return Object.values(groups).map(s => ({
+    ...s,
+    latestDate: s.reviews[0]?.date || ''
+  }));
 }
 
 function scoreBadge(score) {
