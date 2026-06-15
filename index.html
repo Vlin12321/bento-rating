@@ -41,10 +41,6 @@
         <option value="count">依評價數</option>
         <option value="name">依店名</option>
       </select>
-      <button onclick="syncMenu()" id="syncBtn" title="從餐點確認表同步今日菜單"
-        class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
-        🔄
-      </button>
     </div>
   </div>
 </header>
@@ -52,13 +48,23 @@
 <main class="max-w-4xl mx-auto px-4 py-6">
 
   <!-- 今日便當區 -->
-  <section id="todaySection" class="hidden mb-8">
+  <section id="todaySection" class="hidden mb-6">
     <div class="flex items-center gap-2 mb-3">
       <span class="text-lg">☀️</span>
       <h2 class="font-bold text-gray-800 text-base">今日便當</h2>
       <span id="todayDate" class="text-xs text-gray-500"></span>
     </div>
     <div id="todayCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- 昨日便當區 -->
+  <section id="yesterdaySection" class="hidden mb-8">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">🌙</span>
+      <h2 class="font-bold text-gray-800 text-base">昨日便當</h2>
+      <span id="yesterdayDate" class="text-xs text-gray-500"></span>
+    </div>
+    <div id="yesterdayCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
   </section>
 
   <!-- 所有店家 -->
@@ -78,6 +84,20 @@
   </div>
 
 </main>
+
+<!-- 查看評價 Modal -->
+<div id="reviewsModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in max-h-[80vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b shrink-0">
+      <div>
+        <h3 id="reviewsModalTitle" class="font-bold text-gray-800"></h3>
+        <p id="reviewsModalDate" class="text-xs text-gray-400 mt-0.5"></p>
+      </div>
+      <button onclick="closeReviewsModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    </div>
+    <div id="reviewsModalBody" class="overflow-y-auto px-5 py-3 space-y-3"></div>
+  </div>
+</div>
 
 <!-- 評分 Modal -->
 <div id="ratingModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
@@ -172,18 +192,21 @@ const DEMO_TODAY = { '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯
 let allStores = [];
 let menuData = {};
 let currentStore = null;
+let _dayDishes = {}; // key: normalizeName(store)+'|'+dateStr
 
 // ─── 初始化 ─────────────────────────────────────────────────
 async function init() {
   const today = getToday();
+  const yesterday = getBusinessYesterday(today);
   document.getElementById('todayDate').textContent = today;
+  document.getElementById('yesterdayDate').textContent = yesterday;
 
-  // 平行載入
-  const [stores, todayStores, menu] = DEMO_MODE
-    ? [DEMO_STORES, { stores: DEMO_TODAY }, DEMO_MENU]
+  const [stores, todayStores, yesterdayStores, menu] = DEMO_MODE
+    ? [DEMO_STORES, { stores: DEMO_TODAY }, { stores: {} }, DEMO_MENU]
     : await Promise.all([
         apiFetch('getStores'),
         apiFetch('getTodayStores', { date: today }),
+        apiFetch('getTodayStores', { date: yesterday }),
         apiFetch('getMenu')
       ]);
 
@@ -193,49 +216,71 @@ async function init() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('storeCount').textContent = `${allStores.length} 間`;
 
-  // 今日便當
   if (todayStores?.stores && Object.keys(todayStores.stores).length > 0) {
-    renderTodaySection(todayStores.stores, today);
+    renderDaySection('today', todayStores.stores, today);
+  }
+  if (yesterdayStores?.stores && Object.keys(yesterdayStores.stores).length > 0) {
+    renderDaySection('yesterday', yesterdayStores.stores, yesterday);
   }
 
   filterStores();
-
-  // 搜尋 & 排序
   document.getElementById('searchInput').addEventListener('input', filterStores);
   document.getElementById('sortSelect').addEventListener('change', filterStores);
 }
 
-// ─── 今日便當 ───────────────────────────────────────────────
-function renderTodaySection(stores, today) {
-  const sec = document.getElementById('todaySection');
-  const container = document.getElementById('todayCards');
+// ─── 今日 / 昨日便當 ────────────────────────────────────────
+function renderDaySection(day, stores, dateStr) {
+  const isToday = day === 'today';
+  const sec = document.getElementById(isToday ? 'todaySection' : 'yesterdaySection');
+  const container = document.getElementById(isToday ? 'todayCards' : 'yesterdayCards');
   const badge = document.getElementById('todayBadge');
 
   sec.classList.remove('hidden');
-  badge.classList.remove('hidden');
-  badge.textContent = `今日 ${Object.keys(stores).length} 間`;
+  if (isToday) {
+    badge.classList.remove('hidden');
+    badge.textContent = `今日 ${Object.keys(stores).length} 間`;
+  }
 
   container.innerHTML = '';
   for (const [store, dishes] of Object.entries(stores)) {
-    const storeData = allStores.find(s => s.name === store);
+    _dayDishes[normalizeName(store) + '|' + dateStr] = dishes;
+    const key = normalizeName(store);
+    const storeData = allStores.find(s => normalizeName(s.name) === key);
     const avg = storeData ? storeData.avg : null;
     const count = storeData ? storeData.count : 0;
+    // 昨日評價：篩出該日期的評分
+    const dayReviews = storeData
+      ? storeData.reviews.filter(r => r.date === dateStr)
+      : [];
 
+    const glowClass = isToday ? 'today-glow' : 'border-2 border-gray-200';
     const card = document.createElement('div');
-    card.className = 'bg-white rounded-xl p-4 today-glow flex items-start justify-between gap-3';
+    card.className = `bg-white rounded-xl p-4 ${glowClass}`;
     card.innerHTML = `
-      <div class="flex-1 min-w-0">
-        <div class="font-semibold text-gray-800 truncate">${store}</div>
-        <div class="text-xs text-gray-500 mt-0.5 line-clamp-2">${dishes.slice(0,3).join('、')}${dishes.length>3?'…':''}</div>
-        ${avg !== null ? `<div class="mt-1.5 flex items-center gap-1.5">
-          ${scoreBadge(avg)}
-          <span class="text-xs text-gray-400">${count} 則評價</span>
-        </div>` : '<div class="text-xs text-gray-400 mt-1">尚無評分</div>'}
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-gray-800">${store}</div>
+          <div class="text-xs text-gray-500 mt-0.5">${dishes.slice(0,3).join('、')}${dishes.length>3?'…':''}</div>
+          ${avg !== null
+            ? `<div class="mt-1.5 flex items-center gap-1.5">
+                ${scoreBadge(avg)}
+                <button onclick="showReviewsModal('${esc(store)}','${dateStr}')" class="text-xs text-orange-500 hover:underline">${count} 則評價</button>
+               </div>`
+            : '<div class="text-xs text-gray-400 mt-1">尚無評分</div>'}
+        </div>
+        <button onclick="openModal('${esc(store)}','${dateStr}')"
+          class="shrink-0 ${isToday ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-400 hover:bg-gray-500'} text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          評分
+        </button>
       </div>
-      <button onclick="openModal('${esc(store)}')"
-        class="shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-        評分
-      </button>`;
+      ${dayReviews.length ? `
+        <div class="border-t border-gray-100 pt-2 space-y-1">
+          ${dayReviews.map(r => `
+            <div class="flex items-start gap-2 text-xs">
+              <div class="flex-1 text-gray-600">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
+              <div class="flex items-center gap-1 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
+            </div>`).join('')}
+        </div>` : ''}`;
     container.appendChild(card);
   }
 }
@@ -316,7 +361,7 @@ function filterStores() {
 }
 
 // ─── 評分 Modal ─────────────────────────────────────────────
-function openModal(storeName) {
+function openModal(storeName, dateStr) {
   currentStore = storeName;
   document.getElementById('modalStoreName').textContent = storeName;
   document.getElementById('inputScore').value = 8;
@@ -327,10 +372,11 @@ function openModal(storeName) {
   document.getElementById('inputDishCustom').value = '';
   document.getElementById('submitMsg').classList.add('hidden');
 
-  // 填入菜單選項
+  // 優先用當日菜單，否則用全部菜單
   const dishSelect = document.getElementById('inputDish');
   dishSelect.innerHTML = '<option value="">選擇餐點...</option>';
-  const dishes = menuData[storeName] || [];
+  const dayKey = normalizeName(storeName) + '|' + (dateStr || '');
+  const dishes = _dayDishes[dayKey] || menuData[storeName] || [];
   dishes.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d;
@@ -415,6 +461,23 @@ function getToday() {
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// 台灣國定假日（可逐年更新）
+const TW_HOLIDAYS = new Set([
+  '2026/01/01','2026/01/28','2026/01/29','2026/01/30','2026/01/31',
+  '2026/02/01','2026/02/02','2026/02/28','2026/04/03','2026/04/04',
+  '2026/05/01','2026/05/31','2026/09/26','2026/10/10'
+]);
+
+function getBusinessYesterday(todayStr) {
+  const parts = todayStr.split('/');
+  const d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  do {
+    d.setDate(d.getDate() - 1);
+  } while (d.getDay() === 0 || d.getDay() === 6 ||
+           TW_HOLIDAYS.has(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`));
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
 // ─── 店家名稱正規化（合併相似名稱）────────────────────────────
 // 移除 - · 空格等符號後比對，e.g. 諾艾榭-歐風精緻餐盒 ≡ 諾艾榭歐風精緻餐盒
 function normalizeName(name) {
@@ -456,9 +519,51 @@ function esc(str) {
   return str.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
 }
 
+// ─── 查看評價 Modal ──────────────────────────────────────────
+function showReviewsModal(storeName, dateStr) {
+  const key = normalizeName(storeName);
+  const store = allStores.find(s => normalizeName(s.name) === key);
+  const reviews = store ? store.reviews.filter(r => !dateStr || r.date === dateStr) : [];
+
+  document.getElementById('reviewsModalTitle').textContent = storeName;
+  document.getElementById('reviewsModalDate').textContent = dateStr ? `${dateStr} 的評價（共 ${reviews.length} 則）` : `全部評價（${reviews.length} 則）`;
+
+  const body = document.getElementById('reviewsModalBody');
+  if (!reviews.length) {
+    body.innerHTML = '<div class="text-center py-8 text-gray-400">尚無評價記錄</div>';
+  } else {
+    body.innerHTML = reviews.map(r => `
+      <div class="py-2 border-b border-gray-100 last:border-0">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-700">${r.dish}</div>
+            ${r.sides ? `<div class="text-xs text-gray-400">${r.sides}</div>` : ''}
+            ${r.comment ? `<div class="text-sm text-gray-500 mt-0.5">${r.comment}</div>` : ''}
+          </div>
+          <div class="shrink-0 flex flex-col items-end gap-0.5">
+            ${r.score !== null ? scoreBadge(r.score) : ''}
+            <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
+          </div>
+        </div>
+        <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
+      </div>`).join('');
+  }
+
+  document.getElementById('reviewsModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReviewsModal() {
+  document.getElementById('reviewsModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
 // 點 Modal 外部關閉
 document.getElementById('ratingModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById('reviewsModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeReviewsModal();
 });
 
 // ─── 同步今日菜單 ────────────────────────────────────────────
