@@ -6,17 +6,17 @@
 <title>🍱 便當評分系統</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0fdf4; }
   .score-badge { font-variant-numeric: tabular-nums; }
   .score-high { background: #dcfce7; color: #166534; }
   .score-mid  { background: #fef9c3; color: #854d0e; }
   .score-low  { background: #fee2e2; color: #991b1b; }
   .card { transition: box-shadow 0.2s; }
   .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-  .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+  .tab-btn.active { border-bottom: 2px solid #16a34a; color: #16a34a; }
   details > summary { list-style: none; }
   details > summary::-webkit-details-marker { display: none; }
-  .today-glow { box-shadow: 0 0 0 3px #93c5fd, 0 4px 20px rgba(147,197,253,0.35); }
+  .today-glow { box-shadow: 0 0 0 3px #86efac, 0 4px 20px rgba(134,239,172,0.35); }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   .fade-in { animation: fadeIn 0.25s ease; }
 </style>
@@ -24,11 +24,11 @@
 <body>
 
 <!-- Header -->
-<header class="bg-white border-b border-blue-100 sticky top-0 z-50 shadow-sm">
+<header class="bg-white border-b border-green-100 sticky top-0 z-50 shadow-sm">
   <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-2">
     <span class="text-2xl">🍱</span>
     <span class="font-bold text-gray-800 text-lg">便當評分</span>
-    <span id="todayBadge" class="hidden text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium"></span>
+    <span id="todayBadge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"></span>
   </div>
 </header>
 
@@ -62,8 +62,8 @@
       <span id="storeCount" class="text-xs text-gray-500"></span>
       <div class="flex items-center gap-2 ml-auto">
         <input id="searchInput" type="text" placeholder="搜尋店家..."
-          class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-blue-400">
-        <select id="sortSelect" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+          class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-green-500">
+        <select id="sortSelect" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500 bg-white">
           <option value="date">依日期</option>
           <option value="avg">依均分</option>
           <option value="count">依評價數</option>
@@ -111,24 +111,24 @@
       <div>
         <label class="text-sm font-semibold text-gray-600 mb-1 block">暱稱（可空白）</label>
         <input id="inputRater" type="text" placeholder="輸入暱稱..." maxlength="10"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
       </div>
       <div>
         <label class="text-sm font-semibold text-gray-600 mb-1 block">選擇餐點 <span class="text-red-400">*</span></label>
-        <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
+        <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 bg-white">
           <option value="">選擇餐點...</option>
         </select>
         <input id="inputDishCustom" type="text" placeholder="或手動輸入餐點名稱..."
-          class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+          class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
       </div>
       <div>
         <label class="text-sm font-semibold text-gray-600 mb-1 block">配菜（選填）</label>
         <input id="inputSides" type="text" placeholder="例：高麗菜、水煮蛋"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
       </div>
       <div>
         <label class="text-sm font-semibold text-gray-600 mb-1 block">
-          分數：<span id="scoreDisplay" class="text-blue-600 font-bold text-base">8</span> / 10
+          分數：<span id="scoreDisplay" class="text-green-600 font-bold text-base">8</span> / 10
         </label>
         <input type="hidden" id="inputScore" value="8">
         <div id="starRating" class="py-1"></div>
@@ -136,10 +136,10 @@
       <div>
         <label class="text-sm font-semibold text-gray-600 mb-1 block">評語（選填）</label>
         <textarea id="inputComment" rows="2" placeholder="簡單說說..."
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"></textarea>
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none"></textarea>
       </div>
       <button onclick="submitRating()"
-        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl transition-colors">
+        class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-xl transition-colors">
         送出評分
       </button>
       <p id="submitMsg" class="hidden text-center text-sm text-green-600 font-medium">✅ 已送出！謝謝評分</p>
@@ -251,10 +251,10 @@ function renderDaySection(day, stores, dateStr) {
     const card = document.createElement('div');
     card.className = `bg-white rounded-xl p-4 ${glowClass}`;
     const chipBase = isToday
-      ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
+      ? 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
       : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200';
     const otherChip = isToday
-      ? 'bg-blue-500 hover:bg-blue-600 text-white'
+      ? 'bg-green-500 hover:bg-green-600 text-white'
       : 'bg-gray-400 hover:bg-gray-500 text-white';
 
     card.innerHTML = `
@@ -263,7 +263,7 @@ function renderDaySection(day, stores, dateStr) {
         ${avg !== null
           ? `<div class="mt-1 flex items-center gap-1.5">
               ${scoreBadge(avg)}
-              <button data-store="${esc(store)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)" class="text-xs text-blue-500 hover:underline">${count} 則評價</button>
+              <button data-store="${esc(store)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)" class="text-xs text-green-500 hover:underline">${count} 則評價</button>
              </div>`
           : '<div class="text-xs text-gray-400 mt-0.5">尚無評分</div>'}
       </div>
@@ -342,7 +342,7 @@ function renderStoreDetail(store) {
     <div class="px-4 py-3">
       ${reviewsHtml}
       <button onclick="openModal('${esc(store.name)}')"
-        class="mt-3 w-full text-sm text-blue-600 border border-blue-200 hover:bg-blue-50 rounded-lg py-1.5 transition-colors font-medium">
+        class="mt-3 w-full text-sm text-green-600 border border-green-200 hover:bg-green-50 rounded-lg py-1.5 transition-colors font-medium">
         + 我要評分
       </button>
     </div>`;
@@ -548,7 +548,7 @@ function renderStars(score) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = i <= score ? '★' : '☆';
-    btn.className = `flex-1 text-2xl leading-none text-center transition-colors ${i <= score ? 'text-blue-400' : 'text-gray-300'} hover:text-blue-400`;
+    btn.className = `flex-1 text-2xl leading-none text-center transition-colors ${i <= score ? 'text-green-500' : 'text-gray-300'} hover:text-green-500`;
     btn.addEventListener('mouseenter', () => highlightStars(i));
     btn.addEventListener('mouseleave', () => renderStars(+document.getElementById('inputScore').value));
     btn.addEventListener('click', () => setScore(i));
@@ -583,7 +583,7 @@ function renderStars(score) {
 function highlightStars(n) {
   document.getElementById('starRating').querySelectorAll('button').forEach((b, i) => {
     b.textContent = i < n ? '★' : '☆';
-    b.className = `flex-1 text-2xl leading-none text-center transition-colors ${i < n ? 'text-blue-400' : 'text-gray-300'} hover:text-blue-400`;
+    b.className = `flex-1 text-2xl leading-none text-center transition-colors ${i < n ? 'text-green-500' : 'text-gray-300'} hover:text-green-500`;
   });
 }
 
