@@ -97,52 +97,64 @@
 </div>
 
 <!-- 評分 Modal -->
-<div id="ratingModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
-  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
-    <div class="flex items-center justify-between px-5 py-4 border-b">
-      <h3 class="font-bold text-gray-800">✏️ 留下評分</h3>
+<div id="ratingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+  <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl fade-in">
+    <div class="flex items-center justify-between px-5 py-3 border-b">
+      <div>
+        <h3 class="font-bold text-gray-800">✏️ 留下評分</h3>
+        <div id="modalStoreName" class="text-sm text-gray-500 mt-0.5"></div>
+      </div>
       <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
     </div>
-    <div class="px-5 py-4 space-y-4">
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">店家</label>
-        <div id="modalStoreName" class="font-semibold text-gray-800"></div>
+    <div class="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-3">
+
+      <!-- 左欄 -->
+      <div class="space-y-3">
+        <div>
+          <label class="text-sm font-semibold text-gray-600 mb-1 block">暱稱</label>
+          <input id="inputRater" type="text" maxlength="10"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-gray-600 mb-1 block">選擇餐點 <span class="text-red-400">*</span></label>
+          <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 bg-white">
+            <option value="">選擇餐點...</option>
+          </select>
+          <input id="inputDishCustom" type="text" placeholder="或手動輸入..."
+            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-gray-600 mb-1 block">配菜（選填）</label>
+          <input id="inputSides" type="text" placeholder="高麗菜、水煮蛋..."
+            oninput="syncSideChips()"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
+          <div id="sideChips" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+        </div>
       </div>
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">暱稱（可空白）</label>
-        <input id="inputRater" type="text" placeholder="輸入暱稱..." maxlength="10"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
+
+      <!-- 右欄 -->
+      <div class="space-y-3 flex flex-col">
+        <div>
+          <label class="text-sm font-semibold text-gray-600 mb-1 block">
+            分數：<span id="scoreDisplay" class="text-green-600 font-bold text-base">8</span> / 10
+          </label>
+          <input type="hidden" id="inputScore" value="8">
+          <div id="starRating" class="py-1"></div>
+        </div>
+        <div class="flex-1">
+          <label class="text-sm font-semibold text-gray-600 mb-1 block">評語（選填）</label>
+          <textarea id="inputComment" rows="3" placeholder="簡單說說..."
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none"></textarea>
+        </div>
+        <div>
+          <button id="submitBtn" onclick="submitRating()"
+            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition-colors">
+            送出評分
+          </button>
+          <p id="submitMsg" class="hidden text-center text-sm text-green-600 font-medium mt-2">✅ 已送出！謝謝評分</p>
+        </div>
       </div>
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">選擇餐點 <span class="text-red-400">*</span></label>
-        <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 bg-white">
-          <option value="">選擇餐點...</option>
-        </select>
-        <input id="inputDishCustom" type="text" placeholder="或手動輸入餐點名稱..."
-          class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
-      </div>
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">配菜（選填）</label>
-        <input id="inputSides" type="text" placeholder="例：高麗菜、水煮蛋"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
-      </div>
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">
-          分數：<span id="scoreDisplay" class="text-green-600 font-bold text-base">8</span> / 10
-        </label>
-        <input type="hidden" id="inputScore" value="8">
-        <div id="starRating" class="py-1"></div>
-      </div>
-      <div>
-        <label class="text-sm font-semibold text-gray-600 mb-1 block">評語（選填）</label>
-        <textarea id="inputComment" rows="2" placeholder="簡單說說..."
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none"></textarea>
-      </div>
-      <button onclick="submitRating()"
-        class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-xl transition-colors">
-        送出評分
-      </button>
-      <p id="submitMsg" class="hidden text-center text-sm text-green-600 font-medium">✅ 已送出！謝謝評分</p>
+
     </div>
   </div>
 </div>
@@ -364,17 +376,59 @@ function filterStores() {
   renderStoreList(filtered);
 }
 
+// ─── 暱稱自動產生 ────────────────────────────────────────────
+function getDefaultNickname() {
+  const saved = localStorage.getItem('bentoRater');
+  if (saved) return saved;
+  const seed = navigator.userAgent + screen.width + screen.height + (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+  const hash = [...seed].reduce((h, c) => Math.imul(h, 31) + c.charCodeAt(0) | 0, 0);
+  const adj = ['吃貨', '大胃王', '美食家', '挑嘴的', '快樂的', '飢餓的', '幸福的', '滿足的'];
+  const noun = ['熊貓', '柴犬', '貓咪', '兔子', '倉鼠', '狐狸', '浣熊', '企鵝'];
+  const nick = adj[Math.abs(hash) % adj.length] + noun[Math.abs(hash >> 4) % noun.length];
+  localStorage.setItem('bentoRater', nick);
+  return nick;
+}
+
+// ─── 配菜快選 ────────────────────────────────────────────────
+const COMMON_SIDES = ['高麗菜', '水煮蛋', '荷包蛋', '豆腐', '地瓜'];
+
+function renderSideChips() {
+  const container = document.getElementById('sideChips');
+  const selected = getSidesSet();
+  container.innerHTML = COMMON_SIDES.map(s => {
+    const on = selected.has(s);
+    const cls = on
+      ? 'text-xs px-2.5 py-1 rounded-full cursor-pointer transition-colors bg-green-600 text-white select-none'
+      : 'text-xs px-2.5 py-1 rounded-full cursor-pointer transition-colors bg-green-50 text-green-700 border border-green-200 select-none';
+    return `<span class="${cls}" onclick="toggleSide('${s}')">${s}</span>`;
+  }).join('');
+}
+
+function getSidesSet() {
+  return new Set(document.getElementById('inputSides').value.split('、').map(s => s.trim()).filter(Boolean));
+}
+
+function toggleSide(side) {
+  const set = getSidesSet();
+  set.has(side) ? set.delete(side) : set.add(side);
+  document.getElementById('inputSides').value = [...set].join('、');
+  renderSideChips();
+}
+
+function syncSideChips() { renderSideChips(); }
+
 // ─── 評分 Modal ─────────────────────────────────────────────
 function openModal(storeName, dateStr, preselectedDish) {
   currentStore = storeName;
   document.getElementById('modalStoreName').textContent = storeName;
   document.getElementById('inputScore').value = '8';
   document.getElementById('scoreDisplay').textContent = '8';
-  document.getElementById('inputRater').value = localStorage.getItem('bentoRater') || '';
+  document.getElementById('inputRater').value = getDefaultNickname();
   document.getElementById('inputComment').value = '';
   document.getElementById('inputSides').value = '';
   document.getElementById('inputDishCustom').value = '';
   document.getElementById('submitMsg').classList.add('hidden');
+  renderSideChips();
 
   // 優先用當日菜單，否則用全部菜單；過濾飯量備註
   const dishSelect = document.getElementById('inputDish');
@@ -427,7 +481,7 @@ async function submitRating() {
     comment: document.getElementById('inputComment').value.trim()
   };
 
-  const btn = document.querySelector('#ratingModal button[onclick="submitRating()"]');
+  const btn = document.querySelector('#ratingModal button[onclick="submitRating()"]') || document.getElementById('submitBtn');
   btn.textContent = '送出中...';
   btn.disabled = true;
 
