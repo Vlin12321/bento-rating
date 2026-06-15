@@ -389,7 +389,7 @@ function getDefaultNickname() {
 }
 
 // ─── 配菜快選 ────────────────────────────────────────────────
-const COMMON_SIDES = ['高麗菜', '水煮蛋', '荷包蛋', '豆腐', '地瓜'];
+const COMMON_SIDES = ['高麗菜', '水煮蛋', '荷包蛋', '豆腐', '地瓜', '滷蛋', '玉米', '海帶', '花椰菜', '炒青菜'];
 
 function renderSideChips() {
   const container = document.getElementById('sideChips');
@@ -422,7 +422,7 @@ function openModal(storeName, dateStr, preselectedDish) {
   document.getElementById('modalStoreName').textContent = storeName;
   document.getElementById('inputScore').value = '8';
   document.getElementById('scoreDisplay').textContent = '8';
-  document.getElementById('inputRater').value = getDefaultNickname();
+  document.getElementById('inputRater').value = localStorage.getItem('bentoRater') || '';
   document.getElementById('inputComment').value = '';
   document.getElementById('inputSides').value = '';
   document.getElementById('inputDishCustom').value = '';
@@ -467,8 +467,9 @@ async function submitRating() {
   const dish = document.getElementById('inputDish').value || document.getElementById('inputDishCustom').value.trim();
   if (!dish) { alert('請選擇或輸入餐點名稱'); return; }
 
-  const rater = document.getElementById('inputRater').value.trim();
-  if (rater) localStorage.setItem('bentoRater', rater);
+  let rater = document.getElementById('inputRater').value.trim();
+  if (!rater) rater = getDefaultNickname();
+  else localStorage.setItem('bentoRater', rater);
 
   const payload = {
     action: 'addRating',
@@ -621,12 +622,12 @@ function renderStars(score) {
   container.appendChild(numRow);
 
   // Hint labels under 1, 5, 10
-  const hints = { 1: '難吃', 5: '普通', 10: '超好吃' };
+  const hints = { 1: '難吃', 5: '普通', 10: '好吃' };
   const hintRow = document.createElement('div');
   hintRow.className = 'flex mt-0.5';
   for (let i = 1; i <= 10; i++) {
     const span = document.createElement('span');
-    span.className = `flex-1 text-center text-xs select-none leading-none ${hints[i] ? 'text-gray-400' : ''}`;
+    span.className = `flex-1 text-center text-xs select-none leading-none whitespace-nowrap ${hints[i] ? 'text-gray-400' : ''}`;
     span.textContent = hints[i] || '';
     hintRow.appendChild(span);
   }
