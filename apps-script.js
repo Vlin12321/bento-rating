@@ -49,6 +49,8 @@ function doPost(e) {
       result = addRating(data);
     } else if (data.action === 'addMenu') {
       result = addMenu(data);
+    } else if (data.action === 'deleteRating') {
+      result = deleteRating(data);
     } else {
       result = { error: 'Unknown action' };
     }
@@ -146,9 +148,9 @@ function getRatings(store) {
 // ── 新增評分 ───────────────────────────────────────────────
 function addRating(data) {
   const sheet = getSheet(RATINGS_SHEET);
-  const today = formatDate(new Date());
+  const date = data.date || formatDate(new Date());
   sheet.appendRow([
-    today,
+    date,
     data.rater || '',
     data.store,
     data.dish,
@@ -168,6 +170,31 @@ function addMenu(data) {
     data.dish
   ]);
   return { success: true };
+}
+
+// ── 刪除評分 ───────────────────────────────────────────────
+const ADMIN_PASSWORD = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD') || 'admin';
+
+function deleteRating(data) {
+  if (data.adminPassword !== ADMIN_PASSWORD) return { error: '密碼錯誤' };
+
+  const sheet = getSheet(RATINGS_SHEET);
+  const rows = sheet.getDataRange().getValues();
+
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const [date, rater, store, dish, , score] = rows[i];
+    if (
+      formatDate(new Date(date)) === data.date &&
+      store === data.store &&
+      dish === data.dish &&
+      String(rater) === String(data.rater || '') &&
+      Number(score) === Number(data.score)
+    ) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { error: '找不到該筆評價' };
 }
 
 // ── 從餐點確認 Sheet 同步今日菜單 ──────────────────────────
@@ -208,13 +235,13 @@ function syncTodayMenu(dateStr) {
       const storeName = header.split('：').pop().trim();
       if (!storeName) continue;
 
-      // 收集該欄所有不重複的餐點
+      // 收集該欄所有不重複的餐點（去除飯量備註）
       const dishes = new Set();
       for (let row = 1; row < data.length; row++) {
-        const cell = String(data[row][col] || '').trim();
-        if (!cell) continue;
-        // 去掉飯量備註（如「牛逼菲力 半飯」→ 保留完整，或可自訂）
-        dishes.add(cell);
+        const raw = String(data[row][col] || '').trim();
+        if (!raw) continue;
+        const cell = raw.replace(/[\s　]*(半飯|去飯|少飯|多飯|全飯|正常飯|不要飯|少量飯|半份飯|去飯量)/g, '').trim();
+        if (cell) dishes.add(cell);
       }
 
       // 寫入 menu sheet
@@ -247,6 +274,57 @@ function onFormSubmit(e) {
   for (const dish of lines) {
     sheet.appendRow([date, store.trim(), dish.trim()]);
   }
+}
+
+// ── 排程：每天 17:00 自動同步隔天菜單 ────────────────────────
+// 在 Apps Script 執行一次 setupDailyTrigger() 即可設定
+function setupDailyTrigger() {
+  // 刪除舊的同名觸發器避免重複
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'syncScheduled')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger('syncScheduled')
+    .timeBased()
+    .atHour(17)
+    .everyDays(1)
+    .create();
+
+  return { success: true, message: '已設定每天 17:00 自動同步' };
+}
+
+// 自動同步：計算下一個工作日並同步
+function syncScheduled() {
+  const nextDate = getNextBusinessDay(new Date());
+  const result = syncTodayMenu(formatDate(nextDate));
+  Logger.log('syncScheduled: ' + JSON.stringify(result));
+  return result;
+}
+
+// 取得下一個工作日（跳過週末與台灣國定假日）
+function getNextBusinessDay(fromDate) {
+  const holidays = getTaiwanHolidays();
+  const d = new Date(fromDate);
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6 || holidays.has(formatDate(d))) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+// 台灣 2026 國定假日（可逐年更新）
+function getTaiwanHolidays() {
+  return new Set([
+    '2026/01/01', // 元旦
+    '2026/01/28', '2026/01/29', '2026/01/30', '2026/01/31',
+    '2026/02/01', '2026/02/02', // 春節
+    '2026/02/28', // 和平紀念日
+    '2026/04/03', '2026/04/04', // 兒童節/清明
+    '2026/05/01', // 勞動節
+    '2026/05/31', // 端午
+    '2026/09/26', // 中秋
+    '2026/10/10', // 國慶
+  ]);
 }
 
 // ── 工具函式 ───────────────────────────────────────────────

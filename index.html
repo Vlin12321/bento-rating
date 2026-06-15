@@ -133,10 +133,10 @@
         <label class="text-xs font-medium text-gray-500 mb-1 block">
           分數：<span id="scoreDisplay" class="text-orange-600 font-bold text-base">8</span> / 10
         </label>
-        <input id="inputScore" type="range" min="0" max="10" value="8" step="0.5"
-          class="w-full slider-track" oninput="document.getElementById('scoreDisplay').textContent=this.value">
+        <input type="hidden" id="inputScore" value="8">
+        <div id="starRating" class="flex gap-1 py-1"></div>
         <div class="flex justify-between text-xs text-gray-400 mt-0.5">
-          <span>0 難吃</span><span>5 普通</span><span>10 超好吃</span>
+          <span>1 難吃</span><span>5 普通</span><span>10 超好吃</span>
         </div>
       </div>
       <div>
@@ -264,7 +264,7 @@ function renderDaySection(day, stores, dateStr) {
           ${avg !== null
             ? `<div class="mt-1.5 flex items-center gap-1.5">
                 ${scoreBadge(avg)}
-                <button onclick="showReviewsModal('${esc(store)}','${dateStr}')" class="text-xs text-orange-500 hover:underline">${count} 則評價</button>
+                <button data-store="${esc(store)}" data-date="${dateStr}" onclick="showReviewsModal(this.dataset.store,this.dataset.date)" class="text-xs text-orange-500 hover:underline">${count} 則評價</button>
                </div>`
             : '<div class="text-xs text-gray-400 mt-1">尚無評分</div>'}
         </div>
@@ -364,7 +364,7 @@ function filterStores() {
 function openModal(storeName, dateStr) {
   currentStore = storeName;
   document.getElementById('modalStoreName').textContent = storeName;
-  document.getElementById('inputScore').value = 8;
+  document.getElementById('inputScore').value = '8';
   document.getElementById('scoreDisplay').textContent = '8';
   document.getElementById('inputRater').value = localStorage.getItem('bentoRater') || '';
   document.getElementById('inputComment').value = '';
@@ -372,17 +372,20 @@ function openModal(storeName, dateStr) {
   document.getElementById('inputDishCustom').value = '';
   document.getElementById('submitMsg').classList.add('hidden');
 
-  // 優先用當日菜單，否則用全部菜單
+  // 優先用當日菜單，否則用全部菜單；過濾飯量備註
   const dishSelect = document.getElementById('inputDish');
   dishSelect.innerHTML = '<option value="">選擇餐點...</option>';
   const dayKey = normalizeName(storeName) + '|' + (dateStr || '');
-  const dishes = _dayDishes[dayKey] || menuData[storeName] || [];
+  const rawDishes = _dayDishes[dayKey] || menuData[storeName] || [];
+  const dishes = [...new Set(rawDishes.map(normalizeMenuDish).filter(Boolean))];
   dishes.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d;
     opt.textContent = d;
     dishSelect.appendChild(opt);
   });
+
+  renderStars(8);
 
   document.getElementById('ratingModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -519,6 +522,41 @@ function esc(str) {
   return str.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
 }
 
+// ─── 星星評分 ────────────────────────────────────────────────
+function renderStars(score) {
+  const container = document.getElementById('starRating');
+  container.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = i <= score ? '★' : '☆';
+    btn.className = `text-2xl leading-none transition-colors ${i <= score ? 'text-orange-400' : 'text-gray-300'} hover:text-orange-400`;
+    btn.dataset.val = i;
+    btn.addEventListener('mouseenter', () => highlightStars(i));
+    btn.addEventListener('mouseleave', () => renderStars(+document.getElementById('inputScore').value));
+    btn.addEventListener('click', () => setScore(i));
+    container.appendChild(btn);
+  }
+}
+
+function highlightStars(n) {
+  document.getElementById('starRating').querySelectorAll('button').forEach((b, i) => {
+    b.textContent = i < n ? '★' : '☆';
+    b.className = `text-2xl leading-none transition-colors ${i < n ? 'text-orange-400' : 'text-gray-300'} hover:text-orange-400`;
+  });
+}
+
+function setScore(n) {
+  document.getElementById('inputScore').value = n;
+  document.getElementById('scoreDisplay').textContent = n;
+  renderStars(n);
+}
+
+// ─── 菜單正規化（移除飯量備註）────────────────────────────────
+function normalizeMenuDish(dish) {
+  return dish.replace(/[\s　]*(半飯|去飯|少飯|多飯|全飯|正常飯|不要飯|少量飯|半份飯|去飯量)/g, '').trim();
+}
+
 // ─── 查看評價 Modal ──────────────────────────────────────────
 function showReviewsModal(storeName, dateStr) {
   const key = normalizeName(storeName);
@@ -526,13 +564,15 @@ function showReviewsModal(storeName, dateStr) {
   const reviews = store ? store.reviews.filter(r => !dateStr || r.date === dateStr) : [];
 
   document.getElementById('reviewsModalTitle').textContent = storeName;
-  document.getElementById('reviewsModalDate').textContent = dateStr ? `${dateStr} 的評價（共 ${reviews.length} 則）` : `全部評價（${reviews.length} 則）`;
+  document.getElementById('reviewsModalDate').textContent = dateStr
+    ? `${dateStr} 的評價（共 ${reviews.length} 則）`
+    : `全部評價（${reviews.length} 則）`;
 
   const body = document.getElementById('reviewsModalBody');
   if (!reviews.length) {
     body.innerHTML = '<div class="text-center py-8 text-gray-400">尚無評價記錄</div>';
   } else {
-    body.innerHTML = reviews.map(r => `
+    body.innerHTML = reviews.map((r, idx) => `
       <div class="py-2 border-b border-gray-100 last:border-0">
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1 min-w-0">
@@ -545,9 +585,17 @@ function showReviewsModal(storeName, dateStr) {
             <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
           </div>
         </div>
-        <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
+        <div class="flex items-center justify-between mt-0.5">
+          <span class="text-xs text-gray-300">${r.date}</span>
+          <button onclick="deleteRating(${idx}, '${esc(storeName)}', '${dateStr}')"
+            class="text-xs text-gray-300 hover:text-red-400 transition-colors px-1">🗑</button>
+        </div>
       </div>`).join('');
   }
+
+  // store for delete lookup
+  body._reviews = reviews;
+  body._storeName = storeName;
 
   document.getElementById('reviewsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -556,6 +604,37 @@ function showReviewsModal(storeName, dateStr) {
 function closeReviewsModal() {
   document.getElementById('reviewsModal').classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+async function deleteRating(idx, storeName, dateStr) {
+  const body = document.getElementById('reviewsModalBody');
+  const r = body._reviews?.[idx];
+  if (!r) return;
+
+  const pw = prompt('請輸入管理員密碼以刪除此評價：');
+  if (!pw) return;
+
+  if (DEMO_MODE) { alert('Demo 模式無法刪除'); return; }
+
+  try {
+    const res = await apiPost({
+      action: 'deleteRating',
+      adminPassword: pw,
+      date: r.date,
+      store: storeName,
+      rater: r.rater,
+      dish: r.dish,
+      score: r.score
+    });
+    if (res.success) {
+      await init();
+      showReviewsModal(storeName, dateStr);
+    } else {
+      alert(res.error || '刪除失敗');
+    }
+  } catch {
+    alert('刪除失敗，請稍後再試');
+  }
 }
 
 // 點 Modal 外部關閉
