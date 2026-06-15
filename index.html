@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍱 便當評分系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8f5f0; }
+  .score-badge { font-variant-numeric: tabular-nums; }
+  .score-high { background: #dcfce7; color: #166534; }
+  .score-mid  { background: #fef9c3; color: #854d0e; }
+  .score-low  { background: #fee2e2; color: #991b1b; }
+  .card { transition: box-shadow 0.2s; }
+  .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .tab-btn.active { border-bottom: 2px solid #ea580c; color: #ea580c; }
+  .slider-track { accent-color: #ea580c; }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  .today-glow { box-shadow: 0 0 0 3px #fb923c, 0 4px 20px rgba(251,146,60,0.3); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .fade-in { animation: fadeIn 0.25s ease; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="bg-white border-b border-orange-100 sticky top-0 z-50 shadow-sm">
+  <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🍱</span>
+      <span class="font-bold text-gray-800 text-lg">便當評分</span>
+      <span id="todayBadge" class="hidden text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <input id="searchInput" type="text" placeholder="搜尋店家..."
+        class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-orange-400">
+      <select id="sortSelect" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-orange-400 bg-white">
+        <option value="avg">依均分</option>
+        <option value="count">依評價數</option>
+        <option value="name">依店名</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 py-6">
+
+  <!-- 今日便當區 -->
+  <section id="todaySection" class="hidden mb-8">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">☀️</span>
+      <h2 class="font-bold text-gray-800 text-base">今日便當</h2>
+      <span id="todayDate" class="text-xs text-gray-500"></span>
+    </div>
+    <div id="todayCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- 所有店家 -->
+  <section>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-lg">🏪</span>
+      <h2 class="font-bold text-gray-800 text-base">所有店家</h2>
+      <span id="storeCount" class="text-xs text-gray-500"></span>
+    </div>
+    <div id="storeList" class="space-y-2"></div>
+  </section>
+
+  <!-- 載入中 -->
+  <div id="loading" class="text-center py-20 text-gray-400">
+    <div class="text-4xl mb-3">🍱</div>
+    <div>載入中...</div>
+  </div>
+
+</main>
+
+<!-- 評分 Modal -->
+<div id="ratingModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl fade-in">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 class="font-bold text-gray-800">✏️ 留下評分</h3>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    </div>
+    <div class="px-5 py-4 space-y-4">
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">店家</label>
+        <div id="modalStoreName" class="font-semibold text-gray-800"></div>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">暱稱（可空白）</label>
+        <input id="inputRater" type="text" placeholder="輸入暱稱..." maxlength="10"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">選擇餐點 <span class="text-red-400">*</span></label>
+        <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 bg-white">
+          <option value="">選擇餐點...</option>
+        </select>
+        <input id="inputDishCustom" type="text" placeholder="或手動輸入餐點名稱..."
+          class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">配菜（選填）</label>
+        <input id="inputSides" type="text" placeholder="例：高麗菜、水煮蛋"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">
+          分數：<span id="scoreDisplay" class="text-orange-600 font-bold text-base">8</span> / 10
+        </label>
+        <input id="inputScore" type="range" min="0" max="10" value="8" step="0.5"
+          class="w-full slider-track" oninput="document.getElementById('scoreDisplay').textContent=this.value">
+        <div class="flex justify-between text-xs text-gray-400 mt-0.5">
+          <span>0 難吃</span><span>5 普通</span><span>10 超好吃</span>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-500 mb-1 block">評語（選填）</label>
+        <textarea id="inputComment" rows="2" placeholder="簡單說說..."
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 resize-none"></textarea>
+      </div>
+      <button onclick="submitRating()"
+        class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition-colors">
+        送出評分
+      </button>
+      <p id="submitMsg" class="hidden text-center text-sm text-green-600 font-medium">✅ 已送出！謝謝評分</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 設定 ───────────────────────────────────────────────────
+const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
+const DEMO_MODE = API_URL.startsWith('YOUR_');
+
+const DEMO_STORES = [
+  { name: '945香古早味排肉飯麵', avg: 9.0, count: 3, reviews: [
+    { date: '2026/04/28', rater: '七七', dish: '燒肉牛排炒飯 180', sides: '', score: 9, comment: '炒飯跟牛肉都蠻好吃的' },
+    { date: '2026/04/15', rater: '品蓉', dish: '排骨飯 120', sides: '高麗菜、荷包蛋', score: 9, comment: '排骨很香' },
+    { date: '2026/03/20', rater: '妞妞', dish: '魯肉飯 80', sides: '', score: 9, comment: '古早味十足' }
+  ]},
+  { name: '馬西獸餐盒', avg: 8.8, count: 5, reviews: [
+    { date: '2026/04/28', rater: '七七', dish: '打拋豬 120', sides: '櫛瓜、地瓜、高麗菜', score: 9, comment: '蔬菜調味剛好，打拋豬味道也挺好但偏油' },
+    { date: '2026/04/10', rater: '涵歆', dish: '泰式打拋雞 110', sides: '炒蛋、高麗菜', score: 8, comment: '醬汁很香' }
+  ]},
+  { name: '雞肉本家', avg: 8.5, count: 2, reviews: [
+    { date: '2026/05/07', rater: '品蓉', dish: '好吃雞肉飯 125', sides: '高麗菜、水煮蛋、滷豆腐', score: 8, comment: '雞肉類似白斬雞，好吃' },
+    { date: '2026/04/20', rater: '映琪', dish: '獅子頭雞肉飯 165', sides: '', score: 9, comment: '雞肉很嫩很好吃' }
+  ]},
+  { name: 'JABABA呷八霸便當', avg: 7.5, count: 2, reviews: [
+    { date: '2026/05/11', rater: '七七', dish: '銷魂炸排骨 120', sides: '油豆腐、高麗菜', score: 8, comment: '青菜調味、炸排骨很厚味道都挺好' }
+  ]},
+  { name: '凰子餐禾手作餐盒', avg: 3.0, count: 1, reviews: [
+    { date: '2026/05/12', rater: '七七', dish: '剝皮辣椒雞個人鍋 160', sides: '高麗菜、菇類', score: 3, comment: '沒有剝皮辣椒的味道、有點清淡' }
+  ]}
+];
+const DEMO_MENU = {
+  '945香古早味排肉飯麵': ['燒肉牛排炒飯 180', '排骨飯 120', '魯肉飯 80', '雞腿飯 130'],
+  '馬西獸餐盒': ['打拋豬 120', '泰式打拋雞 110', '月亮蝦餅便當 150'],
+  '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯 165', '親子丼 140'],
+  'JABABA呷八霸便當': ['銷魂炸排骨 120', '紅燒獅子頭 130'],
+  '凰子餐禾手作餐盒': ['剝皮辣椒雞個人鍋 160', '麻油雞湯鍋 180']
+};
+const DEMO_TODAY = { '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯 165'], 'JABABA呷八霸便當': ['銷魂炸排骨 120'] };
+
+// ─── 狀態 ───────────────────────────────────────────────────
+let allStores = [];
+let menuData = {};
+let currentStore = null;
+
+// ─── 初始化 ─────────────────────────────────────────────────
+async function init() {
+  const today = getToday();
+  document.getElementById('todayDate').textContent = today;
+
+  // 平行載入
+  const [stores, todayStores, menu] = DEMO_MODE
+    ? [DEMO_STORES, { stores: DEMO_TODAY }, DEMO_MENU]
+    : await Promise.all([
+        apiFetch('getStores'),
+        apiFetch('getTodayStores', { date: today }),
+        apiFetch('getMenu')
+      ]);
+
+  allStores = stores || [];
+  menuData = menu || {};
+
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('storeCount').textContent = `${allStores.length} 間`;
+
+  // 今日便當
+  if (todayStores?.stores && Object.keys(todayStores.stores).length > 0) {
+    renderTodaySection(todayStores.stores, today);
+  }
+
+  renderStoreList(allStores);
+
+  // 搜尋 & 排序
+  document.getElementById('searchInput').addEventListener('input', filterStores);
+  document.getElementById('sortSelect').addEventListener('change', filterStores);
+}
+
+// ─── 今日便當 ───────────────────────────────────────────────
+function renderTodaySection(stores, today) {
+  const sec = document.getElementById('todaySection');
+  const container = document.getElementById('todayCards');
+  const badge = document.getElementById('todayBadge');
+
+  sec.classList.remove('hidden');
+  badge.classList.remove('hidden');
+  badge.textContent = `今日 ${Object.keys(stores).length} 間`;
+
+  container.innerHTML = '';
+  for (const [store, dishes] of Object.entries(stores)) {
+    const storeData = allStores.find(s => s.name === store);
+    const avg = storeData ? storeData.avg : null;
+    const count = storeData ? storeData.count : 0;
+
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-xl p-4 today-glow flex items-start justify-between gap-3';
+    card.innerHTML = `
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-gray-800 truncate">${store}</div>
+        <div class="text-xs text-gray-500 mt-0.5 line-clamp-2">${dishes.slice(0,3).join('、')}${dishes.length>3?'…':''}</div>
+        ${avg !== null ? `<div class="mt-1.5 flex items-center gap-1.5">
+          ${scoreBadge(avg)}
+          <span class="text-xs text-gray-400">${count} 則評價</span>
+        </div>` : '<div class="text-xs text-gray-400 mt-1">尚無評分</div>'}
+      </div>
+      <button onclick="openModal('${esc(store)}')"
+        class="shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+        評分
+      </button>`;
+    container.appendChild(card);
+  }
+}
+
+// ─── 店家清單 ───────────────────────────────────────────────
+function renderStoreList(stores) {
+  const container = document.getElementById('storeList');
+  container.innerHTML = '';
+
+  if (!stores.length) {
+    container.innerHTML = '<div class="text-center py-10 text-gray-400">找不到店家</div>';
+    return;
+  }
+
+  stores.forEach(store => {
+    const item = document.createElement('details');
+    item.className = 'bg-white rounded-xl card overflow-hidden';
+    item.innerHTML = `
+      <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="font-medium text-gray-800 truncate">${store.name}</div>
+          <span class="text-xs text-gray-400 shrink-0">${store.count} 則評價</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0 ml-2">
+          ${scoreBadge(store.avg)}
+          <span class="text-gray-300">›</span>
+        </div>
+      </summary>
+      <div class="border-t border-gray-100">
+        ${renderStoreDetail(store)}
+      </div>`;
+    container.appendChild(item);
+  });
+}
+
+function renderStoreDetail(store) {
+  const dishes = menuData[store.name] || [];
+  return `
+    <div class="px-4 py-3">
+      <!-- Inner tabs -->
+      <div class="flex gap-4 border-b border-gray-100 mb-3 text-sm">
+        <button class="tab-btn active pb-2 font-medium text-gray-600"
+          onclick="switchTab(this,'menu-${esc(store.name)}','review-${esc(store.name)}')">📋 菜單</button>
+        <button class="tab-btn pb-2 font-medium text-gray-400"
+          onclick="switchTab(this,'review-${esc(store.name)}','menu-${esc(store.name)}')">💬 評價 (${store.count})</button>
+      </div>
+
+      <!-- 菜單 Tab -->
+      <div id="menu-${esc(store.name)}" class="tab-pane">
+        ${dishes.length
+          ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm text-gray-700">
+              ${dishes.map(d=>`<div class="py-0.5">• ${d}</div>`).join('')}
+             </div>`
+          : '<div class="text-sm text-gray-400">尚無菜單資料</div>'}
+      </div>
+
+      <!-- 評價 Tab -->
+      <div id="review-${esc(store.name)}" class="tab-pane hidden">
+        ${store.reviews.length
+          ? store.reviews.slice(0,10).map(r => `
+            <div class="py-2 border-b border-gray-50 last:border-0">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <span class="text-xs font-medium text-gray-700">${r.dish}</span>
+                  ${r.sides ? `<span class="text-xs text-gray-400 ml-1">/ ${r.sides}</span>` : ''}
+                  ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
+                </div>
+                <div class="shrink-0 flex items-center gap-1.5">
+                  ${r.score !== null ? scoreBadge(r.score) : ''}
+                  <span class="text-xs text-gray-400">${r.rater || '匿名'}</span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-300 mt-0.5">${r.date}</div>
+            </div>`).join('')
+          : '<div class="text-sm text-gray-400">尚無評價</div>'}
+      </div>
+
+      <button onclick="openModal('${esc(store.name)}')"
+        class="mt-3 w-full text-sm text-orange-600 border border-orange-200 hover:bg-orange-50 rounded-lg py-1.5 transition-colors font-medium">
+        + 我要評分
+      </button>
+    </div>`;
+}
+
+// ─── 搜尋 & 排序 ────────────────────────────────────────────
+function filterStores() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let filtered = allStores.filter(s => s.name.toLowerCase().includes(q));
+
+  if (sort === 'avg') filtered.sort((a,b) => b.avg - a.avg);
+  else if (sort === 'count') filtered.sort((a,b) => b.count - a.count);
+  else filtered.sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
+
+  document.getElementById('storeCount').textContent = `${filtered.length} 間`;
+  renderStoreList(filtered);
+}
+
+// ─── 評分 Modal ─────────────────────────────────────────────
+function openModal(storeName) {
+  currentStore = storeName;
+  document.getElementById('modalStoreName').textContent = storeName;
+  document.getElementById('inputScore').value = 8;
+  document.getElementById('scoreDisplay').textContent = '8';
+  document.getElementById('inputRater').value = localStorage.getItem('bentoRater') || '';
+  document.getElementById('inputComment').value = '';
+  document.getElementById('inputSides').value = '';
+  document.getElementById('inputDishCustom').value = '';
+  document.getElementById('submitMsg').classList.add('hidden');
+
+  // 填入菜單選項
+  const dishSelect = document.getElementById('inputDish');
+  dishSelect.innerHTML = '<option value="">選擇餐點...</option>';
+  const dishes = menuData[storeName] || [];
+  dishes.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    dishSelect.appendChild(opt);
+  });
+
+  document.getElementById('ratingModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('ratingModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+async function submitRating() {
+  const dish = document.getElementById('inputDish').value || document.getElementById('inputDishCustom').value.trim();
+  if (!dish) { alert('請選擇或輸入餐點名稱'); return; }
+
+  const rater = document.getElementById('inputRater').value.trim();
+  if (rater) localStorage.setItem('bentoRater', rater);
+
+  const payload = {
+    action: 'addRating',
+    store: currentStore,
+    dish,
+    rater,
+    sides: document.getElementById('inputSides').value.trim(),
+    score: parseFloat(document.getElementById('inputScore').value),
+    comment: document.getElementById('inputComment').value.trim()
+  };
+
+  const btn = document.querySelector('#ratingModal button[onclick="submitRating()"]');
+  btn.textContent = '送出中...';
+  btn.disabled = true;
+
+  try {
+    if (!DEMO_MODE) await apiPost(payload);
+    document.getElementById('submitMsg').classList.remove('hidden');
+    btn.textContent = '✅ 已送出';
+    setTimeout(() => {
+      closeModal();
+      btn.textContent = '送出評分';
+      btn.disabled = false;
+      init(); // 重新載入資料
+    }, 1500);
+  } catch {
+    alert('送出失敗，請稍後再試');
+    btn.textContent = '送出評分';
+    btn.disabled = false;
+  }
+}
+
+// ─── Tab 切換 ───────────────────────────────────────────────
+function switchTab(btn, showId, hideId) {
+  const parent = btn.closest('.tab-btn')?.parentElement || btn.parentElement;
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(showId).classList.remove('hidden');
+  document.getElementById(hideId).classList.add('hidden');
+}
+
+// ─── API 呼叫 ───────────────────────────────────────────────
+async function apiFetch(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+
+async function apiPost(data) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+// ─── 工具 ───────────────────────────────────────────────────
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function scoreBadge(score) {
+  const cls = score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low';
+  return `<span class="score-badge ${cls} text-xs font-bold px-2 py-0.5 rounded-md">${score}</span>`;
+}
+
+function esc(str) {
+  return str.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+}
+
+// 點 Modal 外部關閉
+document.getElementById('ratingModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// 啟動
+init();
+</script>
+</body>
+</html>
