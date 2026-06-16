@@ -61,6 +61,10 @@
       <span class="text-lg">🏪</span>
       <h2 class="font-bold text-gray-800 text-base">所有店家</h2>
       <span id="storeCount" class="text-xs text-gray-500"></span>
+      <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 ml-2">
+        <button id="viewRatingBtn" onclick="setViewMode('rating')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors bg-white text-green-700 shadow-sm">評價</button>
+        <button id="viewMenuBtn" onclick="setViewMode('menu')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors text-gray-500">菜單</button>
+      </div>
       <div class="flex items-center gap-2 ml-auto">
         <input id="searchInput" type="text" placeholder="搜尋店家..."
           class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-green-500">
@@ -205,6 +209,9 @@ let allStores = [];
 let menuData = {};
 let currentStore = null;
 let _dayDishes = {}; // key: normalizeName(store)+'|'+dateStr
+let viewMode = 'rating'; // 'rating' | 'menu'
+let _hasTodayData = false;
+let _hasYesterdayData = false;
 
 // ─── 初始化 ─────────────────────────────────────────────────
 async function init() {
@@ -238,10 +245,13 @@ async function init() {
   const todayGroups = toGroups(todayData);
   const yesterdayGroups = toGroups(yesterdayData);
 
-  if (Object.values(todayGroups).some(g => Object.keys(g).length > 0)) {
+  _hasTodayData = Object.values(todayGroups).some(g => Object.keys(g).length > 0);
+  _hasYesterdayData = Object.values(yesterdayGroups).some(g => Object.keys(g).length > 0);
+
+  if (_hasTodayData) {
     renderDaySection('today', todayGroups, today);
   }
-  if (Object.values(yesterdayGroups).some(g => Object.keys(g).length > 0)) {
+  if (_hasYesterdayData) {
     renderDaySection('yesterday', yesterdayGroups, yesterday);
   }
 
@@ -429,6 +439,22 @@ function renderStoreDetail(store) {
     </div>`;
 }
 
+// ─── 評價 / 菜單 檢視切換 ───────────────────────────────────
+function setViewMode(mode) {
+  viewMode = mode;
+  const isMenu = mode === 'menu';
+
+  document.getElementById('viewRatingBtn').className =
+    `text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${!isMenu ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'}`;
+  document.getElementById('viewMenuBtn').className =
+    `text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${isMenu ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'}`;
+
+  document.getElementById('todaySection').classList.toggle('hidden', isMenu || !_hasTodayData);
+  document.getElementById('yesterdaySection').classList.toggle('hidden', isMenu || !_hasYesterdayData);
+
+  filterStores();
+}
+
 // ─── 搜尋 & 排序 ────────────────────────────────────────────
 function filterStores() {
   const q = document.getElementById('searchInput').value.toLowerCase();
@@ -442,7 +468,43 @@ function filterStores() {
   else filtered.sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
 
   document.getElementById('storeCount').textContent = `${filtered.length} 間`;
-  renderStoreList(filtered);
+  if (viewMode === 'menu') renderStoreListMenu(filtered);
+  else renderStoreList(filtered);
+}
+
+// ─── 菜單檢視：店名 + 總分 + 菜單品項（不顯示個別評論）──────
+function renderStoreListMenu(stores) {
+  const container = document.getElementById('storeList');
+  container.innerHTML = '';
+
+  if (!stores.length) {
+    container.innerHTML = '<div class="text-center py-10 text-gray-400">找不到店家</div>';
+    return;
+  }
+
+  stores.forEach(store => {
+    const menuKey = Object.keys(menuData).find(k => normalizeName(k) === normalizeName(store.name));
+    const dishes = menuKey ? menuData[menuKey] : [];
+
+    const item = document.createElement('div');
+    item.className = 'bg-white rounded-xl card px-4 py-3';
+    item.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="font-medium text-gray-800">${store.name}</div>
+        ${store.avg !== null
+          ? `<button data-store="${esc(store.name)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)"
+              class="flex items-center gap-1.5 shrink-0">
+              ${scoreBadge(store.avg)}<span class="text-xs text-green-600 hover:underline">${store.count} 則評價</span>
+             </button>`
+          : '<span class="text-xs text-gray-400 shrink-0">尚無評分</span>'}
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        ${dishes.length
+          ? dishes.map(d => `<span class="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full">${d}</span>`).join('')
+          : '<span class="text-xs text-gray-400">尚無菜單資料</span>'}
+      </div>`;
+    container.appendChild(item);
+  });
 }
 
 // ─── 暱稱自動產生 ────────────────────────────────────────────
