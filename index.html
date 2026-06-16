@@ -169,7 +169,7 @@
 
 <script>
 // ─── 設定 ───────────────────────────────────────────────────
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
 const DEMO_MODE = new URLSearchParams(location.search).has('demo') || API_URL.startsWith('YOUR_');
@@ -307,7 +307,7 @@ function buildDayCard(store, dishes, dateStr, isToday) {
         ${dayReviews.map(r => `
           <div class="flex items-start gap-2 text-xs">
             <div class="shrink-0 text-gray-600 whitespace-nowrap">${r.dish}</div>
-            <div class="flex-1 text-sm text-gray-600 min-w-0">${r.comment || ''}</div>
+            <div class="flex-1 text-gray-600 min-w-0">${r.comment || ''}</div>
             <div class="flex items-center gap-1.5 shrink-0 w-32 border-l border-gray-100 pl-2">
               <span class="inline-flex justify-center w-8 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}</span>
               <span class="text-gray-600 truncate">${r.rater||'匿名'}</span>
@@ -425,7 +425,7 @@ function renderStoreDetail(store) {
             <div class="flex-1 min-w-0">
               <span class="text-sm font-medium text-gray-700">${r.dish}</span>
               ${r.sides ? `<span class="text-sm text-gray-500 ml-1">/ ${r.sides}</span>` : ''}
-              ${r.comment ? `<div class="text-sm text-gray-600 mt-0.5">${r.comment}</div>` : ''}
+              ${r.comment ? `<div class="text-xs text-gray-600 mt-0.5">${r.comment}</div>` : ''}
             </div>
             <div class="shrink-0 w-28 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
               <div class="flex items-center gap-1.5">
@@ -812,7 +812,7 @@ function showReviewsModal(storeName) {
           <div class="flex-1 min-w-0">
             <div class="text-sm font-medium text-gray-700">${r.dish}</div>
             ${r.sides ? `<div class="text-sm text-gray-500">${r.sides}</div>` : ''}
-            ${r.comment ? `<div class="text-sm text-gray-600 mt-0.5">${r.comment}</div>` : ''}
+            ${r.comment ? `<div class="text-xs text-gray-600 mt-0.5">${r.comment}</div>` : ''}
           </div>
           <div class="shrink-0 w-28 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
             <div class="flex items-center gap-1.5">
