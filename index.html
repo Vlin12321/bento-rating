@@ -30,6 +30,7 @@
     <span class="text-2xl">🍱</span>
     <span class="font-bold text-gray-800 text-lg">便當評分</span>
     <span id="todayBadge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"></span>
+    <span id="demoBadge" class="hidden text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⚠️ 示範模式</span>
     <div class="flex flex-col items-end gap-0.5 ml-auto">
       <span id="appVersion" class="text-[10px] text-gray-300 leading-none"></span>
       <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
@@ -72,7 +73,7 @@
         <input id="searchInput" type="text" placeholder="搜尋店家..."
           class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-green-500">
         <select id="sortSelect" class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500 bg-white">
-          <option value="date">依日期</option>
+          <option id="sortByDate" value="date">依日期</option>
           <option value="avg">依均分</option>
           <option value="count">依評價數</option>
           <option value="name">依店名</option>
@@ -169,10 +170,11 @@
 
 <script>
 // ─── 設定 ───────────────────────────────────────────────────
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.0';
 document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
 const DEMO_MODE = new URLSearchParams(location.search).has('demo') || API_URL.startsWith('YOUR_');
+if (DEMO_MODE) document.getElementById('demoBadge').classList.remove('hidden');
 
 const DEMO_STORES = [
   { name: '945香古早味排肉飯麵', avg: 9.0, count: 3, reviews: [
@@ -460,6 +462,10 @@ function setViewMode(mode) {
 
   document.getElementById('todaySection').classList.toggle('hidden', isMenu || !_hasTodayData);
   document.getElementById('yesterdaySection').classList.toggle('hidden', isMenu || !_hasYesterdayData);
+
+  const sortSelect = document.getElementById('sortSelect');
+  document.getElementById('sortByDate').classList.toggle('hidden', isMenu);
+  if (isMenu && sortSelect.value === 'date') sortSelect.value = 'name';
 
   filterStores();
   window.scrollTo({ top: 0, behavior: 'instant' });
