@@ -6,6 +6,7 @@
 <title>🍱 便當評分系統</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
+  html { font-size: 18px; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0fdf4; }
   .score-badge { font-variant-numeric: tabular-nums; }
   .score-high { background: #dcfce7; color: #166534; }
@@ -25,14 +26,14 @@
 
 <!-- Header -->
 <header class="bg-white border-b border-green-100 sticky top-0 z-50 shadow-sm">
-  <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-2">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
     <span class="text-2xl">🍱</span>
     <span class="font-bold text-gray-800 text-lg">便當評分</span>
     <span id="todayBadge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"></span>
   </div>
 </header>
 
-<main class="max-w-4xl mx-auto px-4 py-6">
+<main class="max-w-5xl mx-auto px-4 py-6">
 
   <!-- 今日便當區 -->
   <section id="todaySection" class="hidden mb-6">
@@ -41,7 +42,7 @@
       <h2 class="font-bold text-gray-800 text-base">今日便當</h2>
       <span id="todayDate" class="text-xs text-gray-500"></span>
     </div>
-    <div id="todayCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+    <div id="todayCards"></div>
   </section>
 
   <!-- 昨日便當區 -->
@@ -51,7 +52,7 @@
       <h2 class="font-bold text-gray-800 text-base">昨日便當</h2>
       <span id="yesterdayDate" class="text-xs text-gray-500"></span>
     </div>
-    <div id="yesterdayCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+    <div id="yesterdayCards"></div>
   </section>
 
   <!-- 所有店家 -->
@@ -192,7 +193,11 @@ const DEMO_MENU = {
   'JABABA呷八霸便當': ['銷魂炸排骨 120', '紅燒獅子頭 130'],
   '凰子餐禾手作餐盒': ['剝皮辣椒雞個人鍋 160', '麻油雞湯鍋 180']
 };
-const DEMO_TODAY = { '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯 165'], 'JABABA呷八霸便當': ['銷魂炸排骨 120'] };
+const DEMO_TODAY = {
+  '午餐': { '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯 165'], 'JABABA呷八霸便當': ['銷魂炸排骨 120'], '一米粒': ['鹽水雞飯 110'] },
+  '晚餐': { '馬西獸餐盒': ['打拋豬 120', '泰式打拋雞 110'], '諾艾榭歐風精緻餐盒': ['義式燉牛 160'] },
+  '茶湯會': { '茶湯會': ['觀音拿鐵(微糖微冰)', '翡翠檸檬(微糖去冰)', '四季春(無糖微冰)'] },
+};
 
 // ─── 狀態 ───────────────────────────────────────────────────
 let allStores = [];
@@ -207,8 +212,8 @@ async function init() {
   document.getElementById('todayDate').textContent = today;
   document.getElementById('yesterdayDate').textContent = yesterday;
 
-  const [stores, todayStores, yesterdayStores, menu] = DEMO_MODE
-    ? [DEMO_STORES, { stores: DEMO_TODAY }, { stores: {} }, DEMO_MENU]
+  const [stores, todayData, yesterdayData, menu] = DEMO_MODE
+    ? [DEMO_STORES, { groups: DEMO_TODAY }, { groups: {} }, DEMO_MENU]
     : await Promise.all([
         apiFetch('getStores'),
         apiFetch('getTodayStores', { date: today }),
@@ -222,11 +227,21 @@ async function init() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('storeCount').textContent = `${allStores.length} 間`;
 
-  if (todayStores?.stores && Object.keys(todayStores.stores).length > 0) {
-    renderDaySection('today', todayStores.stores, today);
+  function toGroups(data) {
+    if (!data) return {};
+    if (data.groups) return data.groups;
+    if (data.stores) return { '': data.stores };
+    return {};
   }
-  if (yesterdayStores?.stores && Object.keys(yesterdayStores.stores).length > 0) {
-    renderDaySection('yesterday', yesterdayStores.stores, yesterday);
+
+  const todayGroups = toGroups(todayData);
+  const yesterdayGroups = toGroups(yesterdayData);
+
+  if (Object.values(todayGroups).some(g => Object.keys(g).length > 0)) {
+    renderDaySection('today', todayGroups, today);
+  }
+  if (Object.values(yesterdayGroups).some(g => Object.keys(g).length > 0)) {
+    renderDaySection('yesterday', yesterdayGroups, yesterday);
   }
 
   filterStores();
@@ -235,67 +250,125 @@ async function init() {
 }
 
 // ─── 今日 / 昨日便當 ────────────────────────────────────────
-function renderDaySection(day, stores, dateStr) {
+function buildDayCard(store, dishes, dateStr, isToday) {
+  _dayDishes[normalizeName(store) + '|' + dateStr] = dishes;
+  const key = normalizeName(store);
+  const storeData = allStores.find(s => normalizeName(s.name) === key);
+  const avg = storeData ? storeData.avg : null;
+  const count = storeData ? storeData.count : 0;
+  const dayReviews = storeData ? storeData.reviews.filter(r => r.date === dateStr) : [];
+
+  const glowClass = isToday ? 'today-glow' : 'border-2 border-gray-200';
+  const card = document.createElement('div');
+  card.className = `bg-white rounded-xl p-4 ${glowClass}`;
+  const chipBase = isToday
+    ? 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
+    : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200';
+  const otherChip = isToday
+    ? 'bg-green-500 hover:bg-green-600 text-white'
+    : 'bg-gray-400 hover:bg-gray-500 text-white';
+
+  card.innerHTML = `
+    <div class="mb-2">
+      <div class="font-semibold text-gray-800">${store}</div>
+      ${avg !== null
+        ? `<div class="mt-1 flex items-center gap-1.5">
+            ${scoreBadge(avg)}
+            <button data-store="${esc(store)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)" class="text-xs text-green-500 hover:underline">${count} 則評價</button>
+           </div>`
+        : '<div class="text-xs text-gray-400 mt-0.5">尚無評分</div>'}
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      ${dishes.map(d => `<button data-store="${esc(store)}" data-date="${dateStr}" data-dish="${esc(d)}"
+        onclick="event.preventDefault();openModal(this.dataset.store,this.dataset.date,this.dataset.dish)"
+        class="text-xs ${chipBase} px-2.5 py-1 rounded-full transition-colors">${d}</button>`).join('')}
+      <button data-store="${esc(store)}" data-date="${dateStr}"
+        onclick="event.preventDefault();openModal(this.dataset.store,this.dataset.date,'其他')"
+        class="text-xs ${otherChip} px-2.5 py-1 rounded-full transition-colors font-medium">＋ 其他</button>
+    </div>
+    ${dayReviews.length ? `
+      <div class="border-t border-gray-100 mt-2 pt-2 space-y-1">
+        ${dayReviews.map(r => `
+          <div class="flex items-start gap-2 text-xs">
+            <div class="flex-1 text-gray-600">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
+            <div class="flex items-center gap-1 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
+          </div>`).join('')}
+      </div>` : ''}`;
+  return card;
+}
+
+function renderDaySection(day, groups, dateStr) {
   const isToday = day === 'today';
   const sec = document.getElementById(isToday ? 'todaySection' : 'yesterdaySection');
   const container = document.getElementById(isToday ? 'todayCards' : 'yesterdayCards');
   const badge = document.getElementById('todayBadge');
 
   sec.classList.remove('hidden');
+  container.innerHTML = '';
+
+  const allCount = Object.values(groups).reduce((s, g) => s + Object.keys(g).length, 0);
   if (isToday) {
     badge.classList.remove('hidden');
-    badge.textContent = `今日 ${Object.keys(stores).length} 間`;
+    badge.textContent = `今日 ${allCount} 間`;
   }
 
-  container.innerHTML = '';
-  for (const [store, dishes] of Object.entries(stores)) {
-    _dayDishes[normalizeName(store) + '|' + dateStr] = dishes;
-    const key = normalizeName(store);
-    const storeData = allStores.find(s => normalizeName(s.name) === key);
-    const avg = storeData ? storeData.avg : null;
-    const count = storeData ? storeData.count : 0;
-    // 昨日評價：篩出該日期的評分
-    const dayReviews = storeData
-      ? storeData.reviews.filter(r => r.date === dateStr)
-      : [];
+  const MAIN_MEALS = ['午餐', '晚餐'];
+  const hasMealTypes = MAIN_MEALS.some(m => groups[m] && Object.keys(groups[m]).length > 0);
 
-    const glowClass = isToday ? 'today-glow' : 'border-2 border-gray-200';
-    const card = document.createElement('div');
-    card.className = `bg-white rounded-xl p-4 ${glowClass}`;
-    const chipBase = isToday
-      ? 'bg-green-50 hover:bg-green-100 text-green-700 border border-green-200'
-      : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200';
-    const otherChip = isToday
-      ? 'bg-green-500 hover:bg-green-600 text-white'
-      : 'bg-gray-400 hover:bg-gray-500 text-white';
+  if (!hasMealTypes) {
+    // Flat layout (old data or yesterday without meal type)
+    const flatStores = Object.values(groups).reduce((acc, g) => Object.assign(acc, g), {});
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+    for (const [store, dishes] of Object.entries(flatStores)) {
+      grid.appendChild(buildDayCard(store, dishes, dateStr, isToday));
+    }
+    container.appendChild(grid);
+    return;
+  }
 
-    card.innerHTML = `
-      <div class="mb-2">
-        <div class="font-semibold text-gray-800">${store}</div>
-        ${avg !== null
-          ? `<div class="mt-1 flex items-center gap-1.5">
-              ${scoreBadge(avg)}
-              <button data-store="${esc(store)}" onclick="event.preventDefault();showReviewsModal(this.dataset.store)" class="text-xs text-green-500 hover:underline">${count} 則評價</button>
-             </div>`
-          : '<div class="text-xs text-gray-400 mt-0.5">尚無評分</div>'}
-      </div>
-      <div class="flex flex-wrap gap-1.5">
-        ${dishes.map(d => `<button data-store="${esc(store)}" data-date="${dateStr}" data-dish="${esc(d)}"
-          onclick="event.preventDefault();openModal(this.dataset.store,this.dataset.date,this.dataset.dish)"
-          class="text-xs ${chipBase} px-2.5 py-1 rounded-full transition-colors">${d}</button>`).join('')}
-        <button data-store="${esc(store)}" data-date="${dateStr}"
-          onclick="event.preventDefault();openModal(this.dataset.store,this.dataset.date,'其他')"
-          class="text-xs ${otherChip} px-2.5 py-1 rounded-full transition-colors font-medium">＋ 其他</button>
-      </div>
-      ${dayReviews.length ? `
-        <div class="border-t border-gray-100 mt-2 pt-2 space-y-1">
-          ${dayReviews.map(r => `
-            <div class="flex items-start gap-2 text-xs">
-              <div class="flex-1 text-gray-600">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
-              <div class="flex items-center gap-1 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
-            </div>`).join('')}
-        </div>` : ''}`;
-    container.appendChild(card);
+  // Meal-split layout: 午餐 left | 晚餐 right
+  const bothExist = MAIN_MEALS.every(m => groups[m] && Object.keys(groups[m]).length > 0);
+  const mainRow = document.createElement('div');
+  mainRow.className = bothExist ? 'grid grid-cols-2 gap-6' : '';
+
+  for (const meal of MAIN_MEALS) {
+    const stores = groups[meal] || {};
+    if (!bothExist && !Object.keys(stores).length) continue;
+    const col = document.createElement('div');
+    const label = document.createElement('p');
+    label.className = 'text-sm font-semibold text-gray-500 mb-2';
+    label.textContent = meal === '午餐' ? '☀️ 午餐' : '🌙 晚餐';
+    col.appendChild(label);
+    const stack = document.createElement('div');
+    stack.className = 'space-y-3';
+    for (const [store, dishes] of Object.entries(stores)) {
+      stack.appendChild(buildDayCard(store, dishes, dateStr, isToday));
+    }
+    col.appendChild(stack);
+    mainRow.appendChild(col);
+  }
+  container.appendChild(mainRow);
+
+  // Other groups (drinks / snacks)
+  const otherStores = {};
+  for (const [type, stores] of Object.entries(groups)) {
+    if (!MAIN_MEALS.includes(type)) Object.assign(otherStores, stores);
+  }
+  if (Object.keys(otherStores).length > 0) {
+    const sep = document.createElement('div');
+    sep.className = 'mt-5 pt-4 border-t border-gray-100';
+    const otherLabel = document.createElement('p');
+    otherLabel.className = 'text-sm font-semibold text-gray-500 mb-2';
+    otherLabel.textContent = '🥤 飲料 / 點心';
+    sep.appendChild(otherLabel);
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-3 gap-3';
+    for (const [store, dishes] of Object.entries(otherStores)) {
+      grid.appendChild(buildDayCard(store, dishes, dateStr, isToday));
+    }
+    sep.appendChild(grid);
+    container.appendChild(sep);
   }
 }
 

@@ -3,8 +3,10 @@
 // 部署為 Web App: 執行身分「我」, 存取權「所有人」
 // ============================================================
 
-const SHEET_ID = '18DCXoe8iXKaEA21zyzqU0kC5rrUsCcGQE9Evepti8ok';
-const ORDER_SHEET_ID = '1XffLpd0nUkgp5TElqAwiSVLchrmDxDarJa-jJAn1lOg'; // 餐點確認 Sheet（固定）
+const VERSION = '1.0.0';
+
+const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+const ORDER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
 const RATINGS_SHEET = 'ratings';
 const MENU_SHEET = 'menu';
 
@@ -63,23 +65,24 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── 取得今日供應店家 ────────────────────────────────────────
+// ── 取得今日供應店家（依餐別分組）──────────────────────────
 function getTodayStores(dateStr) {
   const sheet = getSheet(MENU_SHEET);
   const data = sheet.getDataRange().getValues();
   const today = dateStr || formatDate(new Date());
 
-  const stores = {};
+  const groups = {};
   for (let i = 1; i < data.length; i++) {
-    const [date, store, dish] = data[i];
+    const [date, store, dish, mealType] = data[i];
     if (!store || !dish) continue;
     const d = date ? formatDate(new Date(date)) : '';
-    if (d === today) {
-      if (!stores[store]) stores[store] = [];
-      stores[store].push(dish);
-    }
+    if (d !== today) continue;
+    const meal = String(mealType || '').trim();
+    if (!groups[meal]) groups[meal] = {};
+    if (!groups[meal][store]) groups[meal][store] = [];
+    groups[meal][store].push(dish);
   }
-  return { date: today, stores };
+  return { date: today, groups };
 }
 
 // ── 取得菜單（可篩選日期）──────────────────────────────────
@@ -173,7 +176,7 @@ function addMenu(data) {
 }
 
 // ── 刪除評分 ───────────────────────────────────────────────
-const ADMIN_PASSWORD = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD') || 'admin';
+const ADMIN_PASSWORD = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
 
 function deleteRating(data) {
   if (data.adminPassword !== ADMIN_PASSWORD) return { error: '密碼錯誤' };
@@ -225,6 +228,7 @@ function syncTodayMenu(dateStr) {
     if (data.length < 2) continue;
 
     const headers = data[0]; // 第一行是標題
+    const mealType = ws.getName().slice(mmdd.length).trim(); // "午餐", "晚餐", "茶湯會" 等
 
     // 找出店家欄位：標題含「店家」且包含冒號
     for (let col = 0; col < headers.length; col++) {
@@ -248,7 +252,7 @@ function syncTodayMenu(dateStr) {
       for (const dish of dishes) {
         const key = `${today}|${storeName}|${dish}`;
         if (existing.has(key)) continue;
-        menuSheet.appendRow([today, storeName, dish]);
+        menuSheet.appendRow([today, storeName, dish, mealType]);
         existing.add(key);
         added++;
       }
