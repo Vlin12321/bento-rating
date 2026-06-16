@@ -30,6 +30,10 @@
     <span class="text-2xl">🍱</span>
     <span class="font-bold text-gray-800 text-lg">便當評分</span>
     <span id="todayBadge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"></span>
+    <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 ml-auto">
+      <button id="viewRatingBtn" onclick="setViewMode('rating')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors bg-white text-green-700 shadow-sm">評價</button>
+      <button id="viewMenuBtn" onclick="setViewMode('menu')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors text-gray-500">菜單</button>
+    </div>
   </div>
 </header>
 
@@ -61,10 +65,6 @@
       <span class="text-lg">🏪</span>
       <h2 class="font-bold text-gray-800 text-base">所有店家</h2>
       <span id="storeCount" class="text-xs text-gray-500"></span>
-      <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 ml-2">
-        <button id="viewRatingBtn" onclick="setViewMode('rating')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors bg-white text-green-700 shadow-sm">評價</button>
-        <button id="viewMenuBtn" onclick="setViewMode('menu')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors text-gray-500">菜單</button>
-      </div>
       <div class="flex items-center gap-2 ml-auto">
         <input id="searchInput" type="text" placeholder="搜尋店家..."
           class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-36 focus:outline-none focus:border-green-500">
