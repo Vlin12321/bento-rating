@@ -317,7 +317,7 @@ function renderDaySection(day, groups, dateStr) {
   const hasMealTypes = MAIN_MEALS.some(m => groups[m] && Object.keys(groups[m]).length > 0);
 
   if (!hasMealTypes) {
-    // Flat layout (old data or yesterday without meal type)
+    // Flat layout (old data / no meal type)
     const flatStores = Object.values(groups).reduce((acc, g) => Object.assign(acc, g), {});
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
@@ -328,49 +328,37 @@ function renderDaySection(day, groups, dateStr) {
     return;
   }
 
-  // Meal-split layout: 午餐 left | 晚餐 right
-  const bothExist = MAIN_MEALS.every(m => groups[m] && Object.keys(groups[m]).length > 0);
-  const mainRow = document.createElement('div');
-  mainRow.className = bothExist ? 'grid grid-cols-2 gap-6' : '';
-
+  // Build ordered columns: 午餐, 晚餐, then each other group as its own column
+  const cols = [];
   for (const meal of MAIN_MEALS) {
-    const stores = groups[meal] || {};
-    if (!bothExist && !Object.keys(stores).length) continue;
+    if (groups[meal] && Object.keys(groups[meal]).length) cols.push({ label: meal, stores: groups[meal] });
+  }
+  for (const [type, stores] of Object.entries(groups)) {
+    if (!MAIN_MEALS.includes(type) && Object.keys(stores).length) cols.push({ label: type, stores });
+  }
+
+  const GRID_COLS = ['', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4', 'grid-cols-5'];
+  const grid = document.createElement('div');
+  grid.className = `grid ${GRID_COLS[Math.min(cols.length, 5)] || 'grid-cols-4'} gap-4 items-start`;
+
+  const ICONS = { '午餐': '☀️', '晚餐': '🌙', '飲料': '🧋' };
+  const getIcon = l => ICONS[l] || (l.includes('點心') || l.includes('雞排') ? '🍟' : '🥤');
+
+  for (const { label, stores } of cols) {
     const col = document.createElement('div');
-    const label = document.createElement('p');
-    label.className = 'text-sm font-semibold text-gray-500 mb-2';
-    label.textContent = meal === '午餐' ? '☀️ 午餐' : '🌙 晚餐';
-    col.appendChild(label);
+    const lp = document.createElement('p');
+    lp.className = 'text-sm font-semibold text-gray-500 mb-2';
+    lp.textContent = `${getIcon(label)} ${label}`;
+    col.appendChild(lp);
     const stack = document.createElement('div');
     stack.className = 'space-y-3';
     for (const [store, dishes] of Object.entries(stores)) {
       stack.appendChild(buildDayCard(store, dishes, dateStr, isToday));
     }
     col.appendChild(stack);
-    mainRow.appendChild(col);
+    grid.appendChild(col);
   }
-  container.appendChild(mainRow);
-
-  // Other groups (drinks / snacks)
-  const otherStores = {};
-  for (const [type, stores] of Object.entries(groups)) {
-    if (!MAIN_MEALS.includes(type)) Object.assign(otherStores, stores);
-  }
-  if (Object.keys(otherStores).length > 0) {
-    const sep = document.createElement('div');
-    sep.className = 'mt-5 pt-4 border-t border-gray-100';
-    const otherLabel = document.createElement('p');
-    otherLabel.className = 'text-sm font-semibold text-gray-500 mb-2';
-    otherLabel.textContent = '🥤 飲料 / 點心';
-    sep.appendChild(otherLabel);
-    const grid = document.createElement('div');
-    grid.className = 'grid grid-cols-3 gap-3';
-    for (const [store, dishes] of Object.entries(otherStores)) {
-      grid.appendChild(buildDayCard(store, dishes, dateStr, isToday));
-    }
-    sep.appendChild(grid);
-    container.appendChild(sep);
-  }
+  container.appendChild(grid);
 }
 
 // ─── 店家清單 ───────────────────────────────────────────────
