@@ -3,7 +3,7 @@
 // 部署為 Web App: 執行身分「我」, 存取權「所有人」
 // ============================================================
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.1';
 
 const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 const ORDER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
@@ -85,11 +85,12 @@ function getTodayStores(dateStr) {
   return { date: today, groups };
 }
 
-// ── 取得菜單（可篩選日期）──────────────────────────────────
+// ── 取得菜單（可篩選日期，每店去重）────────────────────────
 function getMenu(dateFilter) {
   const sheet = getSheet(MENU_SHEET);
   const data = sheet.getDataRange().getValues();
   const result = {};
+  const seen = {}; // store → Set，避免同店重複菜品
 
   for (let i = 1; i < data.length; i++) {
     const [date, store, dish] = data[i];
@@ -98,7 +99,10 @@ function getMenu(dateFilter) {
       const d = date ? formatDate(new Date(date)) : '';
       if (d !== dateFilter) continue;
     }
-    if (!result[store]) result[store] = [];
+    if (!result[store]) { result[store] = []; seen[store] = {}; }
+    const key = String(dish).trim();
+    if (seen[store][key]) continue;
+    seen[store][key] = true;
     result[store].push(dish);
   }
   return result;

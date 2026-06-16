@@ -170,7 +170,7 @@
 
 <script>
 // ─── 設定 ───────────────────────────────────────────────────
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
 const DEMO_MODE = new URLSearchParams(location.search).has('demo') || API_URL.startsWith('YOUR_');
@@ -500,7 +500,9 @@ function renderStoreListMenu(stores) {
 
   stores.forEach(store => {
     const menuKey = Object.keys(menuData).find(k => normalizeName(k) === normalizeName(store.name));
-    const dishes = menuKey ? menuData[menuKey] : [];
+    const dishes = menuKey
+      ? [...new Set((menuData[menuKey] || []).map(normalizeMenuDish).filter(Boolean))]
+      : [];
 
     const item = document.createElement('div');
     item.className = 'bg-white rounded-xl card px-4 py-3';
