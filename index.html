@@ -328,35 +328,42 @@ function renderDaySection(day, groups, dateStr) {
     return;
   }
 
-  // Build ordered columns: 午餐, 晚餐, then each other group as its own column
+  // Build up to 3 columns: 午餐, 晚餐, 飲料+點心(合併)
   const cols = [];
   for (const meal of MAIN_MEALS) {
     if (groups[meal] && Object.keys(groups[meal]).length) cols.push({ label: meal, stores: groups[meal] });
   }
+  const otherEntries = [];
   for (const [type, stores] of Object.entries(groups)) {
-    if (!MAIN_MEALS.includes(type) && Object.keys(stores).length) cols.push({ label: type, stores });
+    if (!MAIN_MEALS.includes(type) && Object.keys(stores).length) otherEntries.push([type, stores]);
+  }
+  if (otherEntries.length) {
+    cols.push({ label: otherEntries.map(([t]) => t).join(' / '), groups: otherEntries });
   }
 
-  const GRID_COLS = ['', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4', 'grid-cols-5'];
+  const GRID_COLS = ['', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3'];
   const grid = document.createElement('div');
-  grid.className = `grid ${GRID_COLS[Math.min(cols.length, 5)] || 'grid-cols-4'} gap-4 items-start`;
+  grid.className = `grid ${GRID_COLS[Math.min(cols.length, 3)] || 'grid-cols-3'} gap-4 items-start`;
 
-  const ICONS = { '午餐': '☀️', '晚餐': '🌙', '飲料': '🧋' };
+  const ICONS = { '午餐': '☀️', '晚餐': '🌙' };
   const getIcon = l => ICONS[l] || (l.includes('點心') || l.includes('雞排') ? '🍟' : '🥤');
 
-  for (const { label, stores } of cols) {
-    const col = document.createElement('div');
+  for (const col of cols) {
+    const colEl = document.createElement('div');
     const lp = document.createElement('p');
     lp.className = 'text-sm font-semibold text-gray-500 mb-2';
-    lp.textContent = `${getIcon(label)} ${label}`;
-    col.appendChild(lp);
+    lp.textContent = `${getIcon(col.label)} ${col.label}`;
+    colEl.appendChild(lp);
     const stack = document.createElement('div');
     stack.className = 'space-y-3';
-    for (const [store, dishes] of Object.entries(stores)) {
-      stack.appendChild(buildDayCard(store, dishes, dateStr, isToday));
+    const groupList = col.stores ? [[null, col.stores]] : col.groups;
+    for (const [, stores] of groupList) {
+      for (const [store, dishes] of Object.entries(stores)) {
+        stack.appendChild(buildDayCard(store, dishes, dateStr, isToday));
+      }
     }
-    col.appendChild(stack);
-    grid.appendChild(col);
+    colEl.appendChild(stack);
+    grid.appendChild(colEl);
   }
   container.appendChild(grid);
 }
