@@ -117,7 +117,7 @@
       <div class="space-y-3">
         <div>
           <label class="text-sm font-semibold text-gray-600 mb-1 block">暱稱</label>
-          <input id="inputRater" type="text" maxlength="10"
+          <input id="inputRater" type="text" maxlength="7"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
         </div>
         <div>
@@ -125,12 +125,12 @@
           <select id="inputDish" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 bg-white">
             <option value="">選擇餐點...</option>
           </select>
-          <input id="inputDishCustom" type="text" placeholder="或手動輸入..."
+          <input id="inputDishCustom" type="text" maxlength="10" placeholder="或手動輸入..."
             class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
         </div>
         <div>
           <label class="text-sm font-semibold text-gray-600 mb-1 block">配菜（選填）</label>
-          <input id="inputSides" type="text" placeholder="高麗菜、水煮蛋..."
+          <input id="inputSides" type="text" maxlength="30" placeholder="高麗菜、水煮蛋..."
             oninput="syncSideChips()"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
           <div id="sideChips" class="flex flex-wrap gap-1.5 mt-1.5"></div>
@@ -148,7 +148,7 @@
         </div>
         <div class="flex-1">
           <label class="text-sm font-semibold text-gray-600 mb-1 block">評語（選填）</label>
-          <textarea id="inputComment" rows="3" placeholder="簡單說說..."
+          <textarea id="inputComment" rows="3" maxlength="100" placeholder="簡單說說..."
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none"></textarea>
         </div>
         <div>
@@ -301,8 +301,8 @@ function buildDayCard(store, dishes, dateStr, isToday) {
       <div class="border-t border-gray-100 mt-2 pt-2 space-y-1">
         ${dayReviews.map(r => `
           <div class="flex items-start gap-2 text-xs">
-            <div class="flex-1 text-gray-600">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
-            <div class="flex items-center gap-1 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
+            <div class="flex-1 text-gray-600 min-w-0">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
+            <div class="flex items-center gap-1 shrink-0 border-l border-gray-100 pl-2">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
           </div>`).join('')}
       </div>` : ''}`;
   return card;
@@ -418,7 +418,7 @@ function renderStoreDetail(store) {
               ${r.sides ? `<span class="text-sm text-gray-500 ml-1">/ ${r.sides}</span>` : ''}
               ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
             </div>
-            <div class="shrink-0 flex flex-col items-end gap-0.5">
+            <div class="shrink-0 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
               <div class="flex items-center gap-1.5">
                 ${r.score !== null ? scoreBadge(r.score) : ''}
                 <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
@@ -453,6 +453,7 @@ function setViewMode(mode) {
   document.getElementById('yesterdaySection').classList.toggle('hidden', isMenu || !_hasYesterdayData);
 
   filterStores();
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 // ─── 搜尋 & 排序 ────────────────────────────────────────────
@@ -804,7 +805,7 @@ function showReviewsModal(storeName) {
             ${r.sides ? `<div class="text-sm text-gray-500">${r.sides}</div>` : ''}
             ${r.comment ? `<div class="text-xs text-gray-500 mt-0.5">${r.comment}</div>` : ''}
           </div>
-          <div class="shrink-0 flex flex-col items-end gap-0.5">
+          <div class="shrink-0 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
             <div class="flex items-center gap-1.5">
               ${r.score !== null ? scoreBadge(r.score) : ''}
               <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
