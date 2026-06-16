@@ -163,7 +163,7 @@
 <script>
 // ─── 設定 ───────────────────────────────────────────────────
 const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
-const DEMO_MODE = API_URL.startsWith('YOUR_');
+const DEMO_MODE = new URLSearchParams(location.search).has('demo') || API_URL.startsWith('YOUR_');
 
 const DEMO_STORES = [
   { name: '945香古早味排肉飯麵', avg: 9.0, count: 3, reviews: [
@@ -197,6 +197,7 @@ const DEMO_TODAY = {
   '午餐': { '雞肉本家': ['好吃雞肉飯 125', '獅子頭雞肉飯 165'], 'JABABA呷八霸便當': ['銷魂炸排骨 120'], '一米粒': ['鹽水雞飯 110'] },
   '晚餐': { '馬西獸餐盒': ['打拋豬 120', '泰式打拋雞 110'], '諾艾榭歐風精緻餐盒': ['義式燉牛 160'] },
   '茶湯會': { '茶湯會': ['觀音拿鐵(微糖微冰)', '翡翠檸檬(微糖去冰)', '四季春(無糖微冰)'] },
+  '點心': { '天使雞排': ['椒鹽', '麻辣', '原味'] },
 };
 
 // ─── 狀態 ───────────────────────────────────────────────────
