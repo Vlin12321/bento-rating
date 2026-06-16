@@ -30,9 +30,12 @@
     <span class="text-2xl">🍱</span>
     <span class="font-bold text-gray-800 text-lg">便當評分</span>
     <span id="todayBadge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"></span>
-    <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 ml-auto">
-      <button id="viewRatingBtn" onclick="setViewMode('rating')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors bg-white text-green-700 shadow-sm">評價</button>
-      <button id="viewMenuBtn" onclick="setViewMode('menu')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors text-gray-500">菜單</button>
+    <div class="flex flex-col items-end gap-0.5 ml-auto">
+      <span id="appVersion" class="text-[10px] text-gray-300 leading-none"></span>
+      <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+        <button id="viewRatingBtn" onclick="setViewMode('rating')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors bg-white text-green-700 shadow-sm">評價</button>
+        <button id="viewMenuBtn" onclick="setViewMode('menu')" class="text-xs px-2.5 py-1 rounded-md font-medium transition-colors text-gray-500">菜單</button>
+      </div>
     </div>
   </div>
 </header>
@@ -166,6 +169,8 @@
 
 <script>
 // ─── 設定 ───────────────────────────────────────────────────
+const APP_VERSION = '1.2.0';
+document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
 const API_URL = 'https://script.google.com/macros/s/AKfycbxaNDdd5OEsrFx0FLrJcMfBEcGhYdKXUa8QOoleLZHFxIrI03bN6BgRtqb5fPAjSZ-hYA/exec';
 const DEMO_MODE = new URLSearchParams(location.search).has('demo') || API_URL.startsWith('YOUR_');
 
@@ -303,7 +308,10 @@ function buildDayCard(store, dishes, dateStr, isToday) {
           <div class="flex items-start gap-2 text-xs">
             <div class="shrink-0 text-gray-600 whitespace-nowrap">${r.dish}</div>
             <div class="flex-1 text-gray-400 min-w-0">${r.comment || ''}</div>
-            <div class="flex items-center gap-1 shrink-0 border-l border-gray-100 pl-2">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
+            <div class="flex items-center gap-1.5 shrink-0 border-l border-gray-100 pl-2">
+              <span class="inline-flex justify-center w-8 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}</span>
+              <span class="text-gray-400">${r.rater||'匿名'}</span>
+            </div>
           </div>`).join('')}
       </div>` : ''}`;
   return card;
@@ -421,7 +429,7 @@ function renderStoreDetail(store) {
             </div>
             <div class="shrink-0 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
               <div class="flex items-center gap-1.5">
-                ${r.score !== null ? scoreBadge(r.score) : ''}
+                <span class="inline-flex justify-center w-8 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}</span>
                 <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
               </div>
               <span class="text-xs text-gray-400 whitespace-nowrap">${r.date}</span>
@@ -808,7 +816,7 @@ function showReviewsModal(storeName) {
           </div>
           <div class="shrink-0 flex flex-col items-start gap-0.5 border-l border-gray-100 pl-3">
             <div class="flex items-center gap-1.5">
-              ${r.score !== null ? scoreBadge(r.score) : ''}
+              <span class="inline-flex justify-center w-8 shrink-0">${r.score !== null ? scoreBadge(r.score) : ''}</span>
               <span class="text-xs text-gray-500">${r.rater || '匿名'}</span>
             </div>
             <div class="flex items-center gap-1 mt-0.5">
