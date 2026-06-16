@@ -301,7 +301,8 @@ function buildDayCard(store, dishes, dateStr, isToday) {
       <div class="border-t border-gray-100 mt-2 pt-2 space-y-1">
         ${dayReviews.map(r => `
           <div class="flex items-start gap-2 text-xs">
-            <div class="flex-1 text-gray-600 min-w-0">${r.dish}${r.comment ? `　<span class="text-gray-400">${r.comment}</span>` : ''}</div>
+            <div class="shrink-0 text-gray-600 whitespace-nowrap">${r.dish}</div>
+            <div class="flex-1 text-gray-400 min-w-0">${r.comment || ''}</div>
             <div class="flex items-center gap-1 shrink-0 border-l border-gray-100 pl-2">${r.score !== null ? scoreBadge(r.score) : ''}<span class="text-gray-400">${r.rater||'匿名'}</span></div>
           </div>`).join('')}
       </div>` : ''}`;
