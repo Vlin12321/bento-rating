@@ -3,7 +3,7 @@
 // 部署為 Web App: 執行身分「我」, 存取權「所有人」
 // ============================================================
 
-const VERSION = '1.1.1';
+const VERSION = '1.1.2';
 
 const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 const ORDER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
@@ -22,6 +22,10 @@ function doGet(e) {
   try {
     if (action === 'syncTodayMenu') {
       result = syncTodayMenu(e.parameter.date);
+    } else if (action === 'setupDailyTrigger') {
+      result = setupDailyTrigger();
+    } else if (action === 'listTriggers') {
+      result = listTriggers();
     } else if (action === 'getMenu') {
       result = getMenu(e.parameter.date);
     } else if (action === 'getRatings') {
@@ -299,6 +303,16 @@ function setupDailyTrigger() {
     .create();
 
   return { success: true, message: '已設定每天 17:00 自動同步' };
+}
+
+// 列出目前所有觸發器（診斷用）
+function listTriggers() {
+  const triggers = ScriptApp.getProjectTriggers().map(t => ({
+    handler: t.getHandlerFunction(),
+    type: String(t.getEventType()),
+    source: String(t.getTriggerSource())
+  }));
+  return { count: triggers.length, triggers };
 }
 
 // 自動同步：計算下一個工作日並同步
