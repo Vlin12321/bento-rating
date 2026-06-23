@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.3.3 - 2026-06-23
+onFormSubmit 改用單行宣告，避免複製貼上時換行斷裂造成語法錯誤。
+
 ## v1.3.2 - 2026-06-23
 後端新增 setupDailyTrigger / listTriggers 可透過網址呼叫，方便重建與診斷每日自動同步排程。
 

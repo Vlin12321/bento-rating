@@ -3,7 +3,7 @@
 // 部署為 Web App: 執行身分「我」, 存取權「所有人」
 // ============================================================
 
-const VERSION = '1.1.2';
+const VERSION = '1.1.3';
 
 const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 const ORDER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
@@ -276,8 +276,8 @@ function onFormSubmit(e) {
   const responses = e.namedValues;
   const date = responses['供應日期'] ? responses['供應日期'][0] : '';
   const store = responses['店家名稱'] ? responses['店家名稱'][0] : '';
-  const dishes = responses['餐點（每行一道，格式：餐點名稱 價格）']
-    ? responses['餐點（每行一道，格式：餐點名稱 價格）'][0] : '';
+  const dishKey = '餐點（每行一道，格式：餐點名稱 價格）';
+  const dishes = responses[dishKey] ? responses[dishKey][0] : '';
 
   if (!store || !dishes) return;
 
